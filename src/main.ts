@@ -112,10 +112,7 @@ function pointToAbsolute(
 	const xFactor = width / delta[0],
 		yFactor = height / delta[1];
 
-	return [
-		(from[0] + x - from[0]) * xFactor,
-		-(from[1] + y - from[1]) * yFactor,
-	];
+	return [(x - from[0]) * xFactor, -(y - from[1]) * yFactor];
 }
 
 function getContextDimensions(
@@ -151,6 +148,10 @@ function drawBox(
 
 function plotGraph(
 	context: CanvasRenderingContext2D,
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
 	node: Node | null,
 	[x, y]: readonly [number, number],
 	[dx, dy]: readonly [number, number]
@@ -158,17 +159,23 @@ function plotGraph(
 	console.assert(dx > 0);
 	console.assert(dy > 0);
 
-	drawBox(context, { from: [x, y], delta: [dx, dy] }, [x, y], [dx, dy]);
+	drawBox(context, fromDelta, [x, y], [dx, dy]);
 
 	if (node) {
 		const dxHalf = dx / 2;
 		const dyHalf = dy / 2;
 		const deltaHalf = [dxHalf, dyHalf] as const;
 
-		plotGraph(context, node.topLeft, [x, y], deltaHalf);
-		plotGraph(context, node.topRight, [x + dxHalf, y], deltaHalf);
-		plotGraph(context, node.bottomLeft, [x, y + dyHalf], deltaHalf);
-		plotGraph(context, node.bottomRight, [x + dxHalf, y + dyHalf], deltaHalf);
+		plotGraph(context, fromDelta, node.topLeft, [x, y], deltaHalf);
+		plotGraph(context, fromDelta, node.topRight, [x + dxHalf, y], deltaHalf);
+		plotGraph(context, fromDelta, node.bottomLeft, [x, y - dyHalf], deltaHalf);
+		plotGraph(
+			context,
+			fromDelta,
+			node.bottomRight,
+			[x + dxHalf, y - dyHalf],
+			deltaHalf
+		);
 	}
 }
 
@@ -187,19 +194,31 @@ function drawGraph(
 
 	const node = createTree(zero, 0, [x, y], [dx, dy], searchDepth, plotDepth);
 
-	plotGraph(context, node, [x, y], [dx, dy]);
+	plotGraph(context, { from: [x, y], delta: [dx, dy] }, node, [x, y], [dx, dy]);
 }
 
 const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
+canvas.width = 800;
+canvas.height = 600;
 
 document.body.appendChild(canvas);
 
 const context = canvas.getContext("2d");
 
-// if (context) {
-// 	drawGraph(context, (x, y) => -y ^ (3 - x + 3), [-4, -4], [8, 8], 5, 5);
-// }
-
-drawBox(context, { from: [-4, 4], delta: [8, 8] }, [-2, 2], [4, 4]);
+console.time();
+if (context) {
+	drawGraph(
+		context,
+		(x, y) => (-y) ** 2 + x ** 3 - x + 3,
+		[-150, 200],
+		[240, 500],
+		5,
+		5
+	);
+	console.log("Done drawing");
+	console.timeEnd();
+} else {
+	console.log("Failed to draw");
+}
 
 export {};
