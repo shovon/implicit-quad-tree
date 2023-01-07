@@ -159,8 +159,6 @@ function plotGraph(
 	console.assert(dx > 0);
 	console.assert(dy > 0);
 
-	drawBox(context, fromDelta, [x, y], [dx, dy]);
-
 	if (node) {
 		const dxHalf = dx / 2;
 		const dyHalf = dy / 2;
@@ -176,7 +174,53 @@ function plotGraph(
 			[x + dxHalf, y - dyHalf],
 			deltaHalf
 		);
+	} else {
+		drawBox(context, fromDelta, [x, y], [dx, dy]);
 	}
+}
+
+function getBoxes(
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	node: Node | null,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number]
+): { x: number; y: number; dx: number; dy: number }[] {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+
+	let arr: { x: number; y: number; dx: number; dy: number }[] = [];
+
+	if (node) {
+		const dxHalf = dx / 2;
+		const dyHalf = dy / 2;
+		const deltaHalf = [dxHalf, dyHalf] as const;
+
+		arr = [...arr, ...getBoxes(fromDelta, node.topLeft, [x, y], deltaHalf)];
+		arr = [
+			...arr,
+			...getBoxes(fromDelta, node.topRight, [x + dxHalf, y], deltaHalf),
+		];
+		arr = [
+			...arr,
+			...getBoxes(fromDelta, node.bottomLeft, [x, y - dyHalf], deltaHalf),
+		];
+		arr = [
+			...arr,
+			...getBoxes(
+				fromDelta,
+				node.bottomRight,
+				[x + dxHalf, y - dyHalf],
+				deltaHalf
+			),
+		];
+	} else {
+		arr.push({ x, y, dx, dy });
+	}
+
+	return arr;
 }
 
 function drawGraph(
@@ -209,9 +253,9 @@ console.time();
 if (context) {
 	drawGraph(
 		context,
-		(x, y) => (-y) ** 2 + x ** 3 - x + 3,
-		[-150, 200],
-		[240, 500],
+		(x, y) => -(y ** 2) + x ** 3 - x + 3,
+		[-2, 2],
+		[4, 4],
 		5,
 		5
 	);
@@ -220,5 +264,11 @@ if (context) {
 } else {
 	console.log("Failed to draw");
 }
+
+const nodes = createTree((x, y) => -y + x * 2, 0, [-8, 8], [16, 16], 5, 5);
+
+console.log(
+	getBoxes({ from: [-8, 8], delta: [16, 16] }, nodes, [-8, 8], [16, 16])
+);
 
 export {};
