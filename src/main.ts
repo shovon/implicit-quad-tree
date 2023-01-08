@@ -1,5 +1,3 @@
-const zero = (x: number, y: number) => -y + x;
-
 // I'm implementing the algorithm from this paper https://academic.oup.com/comjnl/article/33/5/402/480353
 
 type Node = {
@@ -251,24 +249,44 @@ const context = canvas.getContext("2d");
 
 console.time();
 if (context) {
-	drawGraph(
-		context,
-		(x, y) => -(y ** 2) + x ** 3 - x + 3,
-		[-2, 2],
-		[4, 4],
-		5,
-		5
+	// drawGraph(
+	// 	context,
+	// 	// (x, y) => -(y ** 2) + x ** 3 - x,
+	// 	(x, y) => -y + x ** 2,
+	// 	[-3, 3],
+	// 	[6, 6],
+	// 	1,
+	// 	6
+	// );
+	// console.log("Done drawing");
+
+	const node = createTree((x, y) => -y + x ** 2, 0, [-3, 3], [6, 6], 1, 6);
+
+	const boxes = getBoxes(
+		{
+			from: [-3, 3],
+			delta: [6, 6],
+		},
+		node,
+		[-3, 3],
+		[6, 6]
 	);
-	console.log("Done drawing");
+
+	for (const box of boxes) {
+		drawBox(
+			context,
+			{
+				from: [-3, 3],
+				delta: [6, 6],
+			},
+			[box.x, box.y],
+			[box.dx, box.dy]
+		);
+	}
+
 	console.timeEnd();
 } else {
 	console.log("Failed to draw");
 }
-
-const nodes = createTree((x, y) => -y + x * 2, 0, [-8, 8], [16, 16], 5, 5);
-
-console.log(
-	getBoxes({ from: [-8, 8], delta: [16, 16] }, nodes, [-8, 8], [16, 16])
-);
 
 export {};
