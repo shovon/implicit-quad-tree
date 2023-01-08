@@ -1,5 +1,121 @@
 // I'm implementing the algorithm from this paper https://academic.oup.com/comjnl/article/33/5/402/480353
 
+type Side = "upper" | "lower" | "left" | "right";
+
+type Point2D = [number, number];
+
+const lut: [Point2D, Point2D][][] = [
+	// 0 nothing
+	[],
+	// 1 bottom left
+	[
+		[
+			[0, 0.5],
+			[0.5, 1],
+		],
+	],
+	// 2 bottom right
+	[
+		[
+			[0.5, 1],
+			[1, 0.5],
+		],
+	],
+	// 3 horizontal
+	[
+		[
+			[0, 0.5],
+			[1, 0.5],
+		],
+	],
+	// 4 top right
+	[
+		[
+			[0.5, 0],
+			[1, 0.5],
+		],
+	],
+	// 5 top left bottom right
+	[
+		[
+			[0.5, 0],
+			[0, 0.5],
+		],
+		[
+			[1, 0.5],
+			[0.5, 1],
+		],
+	],
+	// 6 vertical
+	[
+		[
+			[0.5, 0],
+			[0.5, 1],
+		],
+	],
+	// 7 top left
+	[
+		[
+			[0.5, 0],
+			[0, 0.5],
+		],
+	],
+	// 8 top left
+	[
+		[
+			[0.5, 0],
+			[0, 0.5],
+		],
+	],
+	// 9 vertical
+	[
+		[
+			[0.5, 0],
+			[0.5, 1],
+		],
+	],
+	// 10 top right bottom left
+	[
+		[
+			[0.5, 0],
+			[1, 0.5],
+		],
+		[
+			[0, 0.5],
+			[0.5, 1],
+		],
+	],
+	// 11 top right
+	[
+		[
+			[0.5, 0],
+			[1, 0.5],
+		],
+	],
+	// 12 horizontal
+	[
+		[
+			[0, 0.5],
+			[1, 0.5],
+		],
+	],
+	// 13 bottom right
+	[
+		[
+			[0.5, 1],
+			[1, 0.5],
+		],
+	],
+	// 14 bottom left
+	[
+		[
+			[0, 0.5],
+			[0.5, 1],
+		],
+	],
+	[],
+];
+
 type QuadTreeNode = {
 	readonly topLeft: QuadTreeNode | null;
 	readonly topRight: QuadTreeNode | null;
