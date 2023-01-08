@@ -209,6 +209,7 @@ function plotGraphBoxes(
 	}
 }
 
+// This is a stupid idea
 function drawPoints(
 	context: CanvasRenderingContext2D,
 	zero: (x: number, y: number) => number,
@@ -261,23 +262,24 @@ function drawPoints(
 			Math.sign(zero(x, y + dy))
 		);
 		let dotDrawn = false;
+
 		if (contourPresent(zero, [x, y], [dx, dy])) {
 			if (Math.sign(zero(x, y)) !== Math.sign(zero(x + dx, y))) {
 				drawDot(context, fromDelta, [x + dx / 2, y]);
 				dotDrawn = true;
 			}
 
-			if (Math.sign(zero(x + dx, y)) !== Math.sign(zero(x + dx, y + dy))) {
+			if (Math.sign(zero(x + dx, y)) !== Math.sign(zero(x + dx, y - dy))) {
 				drawDot(context, fromDelta, [x + dx, y + dy / 2]);
 				dotDrawn = true;
 			}
 
-			if (Math.sign(zero(x + dx, y + dy)) !== Math.sign(zero(x, y + dy))) {
+			if (Math.sign(zero(x + dx, y + dy)) !== Math.sign(zero(x, y - dy))) {
 				drawDot(context, fromDelta, [x + dx / 2, y + dy]);
 				dotDrawn = true;
 			}
 
-			if (Math.sign(zero(x, y + dy)) !== Math.sign(zero(x, y))) {
+			if (Math.sign(zero(x, y - dy)) !== Math.sign(zero(x, y))) {
 				drawDot(context, fromDelta, [x, y + dy / 2]);
 				dotDrawn = true;
 			}
