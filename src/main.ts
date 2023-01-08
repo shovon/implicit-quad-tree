@@ -1,10 +1,10 @@
 // I'm implementing the algorithm from this paper https://academic.oup.com/comjnl/article/33/5/402/480353
 
-type Node = {
-	readonly topLeft: Node | null;
-	readonly topRight: Node | null;
-	readonly bottomLeft: Node | null;
-	readonly bottomRight: Node | null;
+type QuadTreeNode = {
+	readonly topLeft: QuadTreeNode | null;
+	readonly topRight: QuadTreeNode | null;
+	readonly bottomLeft: QuadTreeNode | null;
+	readonly bottomRight: QuadTreeNode | null;
 };
 
 function contourPresent(
@@ -34,13 +34,13 @@ function createTree(
 	[dx, dy]: readonly [number, number],
 	searchDepth: number,
 	plotDepth: number
-): Node | null {
+): QuadTreeNode | null {
 	console.assert(dx > 0);
 	console.assert(dy > 0);
 	console.assert(searchDepth > 0);
 	console.assert(plotDepth > 0);
 
-	function subDivide(): Node {
+	function subDivide(): QuadTreeNode {
 		const newDepth = depth + 1;
 		const newDx = dx / 2;
 		const newDy = dy / 2;
@@ -140,17 +140,37 @@ function drawBox(
 	const boxHeight = dimensions[1] * (height / fromDelta.delta[1]);
 
 	context.strokeStyle = "black";
-
+	context.lineWidth = 1;
 	context.strokeRect(x, y, boxWidth, boxHeight);
 }
 
-function plotGraph(
+function drawDot(
 	context: CanvasRenderingContext2D,
 	fromDelta: {
 		readonly from: readonly [number, number];
 		readonly delta: readonly [number, number];
 	},
-	node: Node | null,
+	point: readonly [number, number]
+) {
+	console.assert(fromDelta.delta[0] > 0);
+	console.assert(fromDelta.delta[1] > 0);
+
+	const [width, height] = getContextDimensions(context);
+
+	const [x, y] = pointToAbsolute(fromDelta, point, [width, height]);
+
+	context.fillStyle = "red";
+
+	context.fillRect(x - 1, y - 1, 2, 2);
+}
+
+function plotGraphBoxes(
+	context: CanvasRenderingContext2D,
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	node: QuadTreeNode | null,
 	[x, y]: readonly [number, number],
 	[dx, dy]: readonly [number, number]
 ) {
@@ -162,10 +182,22 @@ function plotGraph(
 		const dyHalf = dy / 2;
 		const deltaHalf = [dxHalf, dyHalf] as const;
 
-		plotGraph(context, fromDelta, node.topLeft, [x, y], deltaHalf);
-		plotGraph(context, fromDelta, node.topRight, [x + dxHalf, y], deltaHalf);
-		plotGraph(context, fromDelta, node.bottomLeft, [x, y - dyHalf], deltaHalf);
-		plotGraph(
+		plotGraphBoxes(context, fromDelta, node.topLeft, [x, y], deltaHalf);
+		plotGraphBoxes(
+			context,
+			fromDelta,
+			node.topRight,
+			[x + dxHalf, y],
+			deltaHalf
+		);
+		plotGraphBoxes(
+			context,
+			fromDelta,
+			node.bottomLeft,
+			[x, y - dyHalf],
+			deltaHalf
+		);
+		plotGraphBoxes(
 			context,
 			fromDelta,
 			node.bottomRight,
@@ -177,12 +209,93 @@ function plotGraph(
 	}
 }
 
+function drawPoints(
+	context: CanvasRenderingContext2D,
+	zero: (x: number, y: number) => number,
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	node: QuadTreeNode | null,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number]
+) {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+
+	if (node) {
+		const dxHalf = dx / 2;
+		const dyHalf = dy / 2;
+		const deltaHalf = [dxHalf, dyHalf] as const;
+
+		drawPoints(context, zero, fromDelta, node.topLeft, [x, y], deltaHalf);
+		drawPoints(
+			context,
+			zero,
+			fromDelta,
+			node.topRight,
+			[x + dxHalf, y],
+			deltaHalf
+		);
+		drawPoints(
+			context,
+			zero,
+			fromDelta,
+			node.bottomLeft,
+			[x, y - dyHalf],
+			deltaHalf
+		);
+		drawPoints(
+			context,
+			zero,
+			fromDelta,
+			node.bottomRight,
+			[x + dxHalf, y - dyHalf],
+			deltaHalf
+		);
+	} else {
+		console.log(
+			Math.sign(zero(x, y)),
+			Math.sign(zero(x + dx, y)),
+			Math.sign(zero(x + dx, y + dy)),
+			Math.sign(zero(x, y + dy))
+		);
+		let dotDrawn = false;
+		if (contourPresent(zero, [x, y], [dx, dy])) {
+			if (Math.sign(zero(x, y)) !== Math.sign(zero(x + dx, y))) {
+				drawDot(context, fromDelta, [x + dx / 2, y]);
+				dotDrawn = true;
+			}
+
+			if (Math.sign(zero(x + dx, y)) !== Math.sign(zero(x + dx, y + dy))) {
+				drawDot(context, fromDelta, [x + dx, y + dy / 2]);
+				dotDrawn = true;
+			}
+
+			if (Math.sign(zero(x + dx, y + dy)) !== Math.sign(zero(x, y + dy))) {
+				drawDot(context, fromDelta, [x + dx / 2, y + dy]);
+				dotDrawn = true;
+			}
+
+			if (Math.sign(zero(x, y + dy)) !== Math.sign(zero(x, y))) {
+				drawDot(context, fromDelta, [x, y + dy / 2]);
+				dotDrawn = true;
+			}
+		}
+
+		console.assert(
+			dotDrawn === contourPresent(zero, [x, y], [dx, dy]),
+			"A contour should not have been drawn but one was drawn anyways!"
+		);
+	}
+}
+
 function getBoxes(
 	fromDelta: {
 		readonly from: readonly [number, number];
 		readonly delta: readonly [number, number];
 	},
-	node: Node | null,
+	node: QuadTreeNode | null,
 	[x, y]: readonly [number, number],
 	[dx, dy]: readonly [number, number]
 ): { x: number; y: number; dx: number; dy: number }[] {
@@ -236,7 +349,94 @@ function drawGraph(
 
 	const node = createTree(zero, 0, [x, y], [dx, dy], searchDepth, plotDepth);
 
-	plotGraph(context, { from: [x, y], delta: [dx, dy] }, node, [x, y], [dx, dy]);
+	plotGraphBoxes(
+		context,
+		{ from: [x, y], delta: [dx, dy] },
+		node,
+		[x, y],
+		[dx, dy]
+	);
+}
+
+function marchingSquares(
+	context: CanvasRenderingContext2D,
+	zero: (x: number, y: number) => number,
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	node: QuadTreeNode | null,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number]
+) {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+
+	if (node) {
+		const dxHalf = dx / 2;
+		const dyHalf = dy / 2;
+		const deltaHalf = [dxHalf, dyHalf] as const;
+
+		marchingSquares(context, zero, fromDelta, node.topLeft, [x, y], deltaHalf);
+		marchingSquares(
+			context,
+			zero,
+			fromDelta,
+			node.topRight,
+			[x + dxHalf, y],
+			deltaHalf
+		);
+		marchingSquares(
+			context,
+			zero,
+			fromDelta,
+			node.bottomLeft,
+			[x, y - dyHalf],
+			deltaHalf
+		);
+		marchingSquares(
+			context,
+			zero,
+			fromDelta,
+			node.bottomRight,
+			[x + dxHalf, y - dyHalf],
+			deltaHalf
+		);
+	} else {
+		console.log(
+			Math.sign(zero(x, y)),
+			Math.sign(zero(x + dx, y)),
+			Math.sign(zero(x + dx, y + dy)),
+			Math.sign(zero(x, y + dy))
+		);
+		let dotDrawn = false;
+		if (contourPresent(zero, [x, y], [dx, dy])) {
+			if (Math.sign(zero(x, y)) !== Math.sign(zero(x + dx, y))) {
+				drawDot(context, fromDelta, [x + dx / 2, y]);
+				dotDrawn = true;
+			}
+
+			if (Math.sign(zero(x + dx, y)) !== Math.sign(zero(x + dx, y + dy))) {
+				drawDot(context, fromDelta, [x + dx, y + dy / 2]);
+				dotDrawn = true;
+			}
+
+			if (Math.sign(zero(x + dx, y + dy)) !== Math.sign(zero(x, y + dy))) {
+				drawDot(context, fromDelta, [x + dx / 2, y + dy]);
+				dotDrawn = true;
+			}
+
+			if (Math.sign(zero(x, y + dy)) !== Math.sign(zero(x, y))) {
+				drawDot(context, fromDelta, [x, y + dy / 2]);
+				dotDrawn = true;
+			}
+		}
+
+		console.assert(
+			dotDrawn === contourPresent(zero, [x, y], [dx, dy]),
+			"A contour should not have been drawn but one was drawn anyways!"
+		);
+	}
 }
 
 const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
@@ -260,7 +460,14 @@ if (context) {
 	// );
 	// console.log("Done drawing");
 
-	const node = createTree((x, y) => -y + x ** 2, 0, [-3, 3], [6, 6], 1, 6);
+	const node = createTree(
+		(x, y) => -y + x ** 2 - 0.01,
+		0,
+		[-3, 3],
+		[6, 6],
+		1,
+		6
+	);
 
 	const boxes = getBoxes(
 		{
@@ -283,6 +490,19 @@ if (context) {
 			[box.dx, box.dy]
 		);
 	}
+
+	drawPoints(
+		context,
+		// (x, y) => -(y ** 2) + x ** 3 - x,
+		(x, y) => -y + x ** 2 - 0.01,
+		{
+			from: [-3, 3],
+			delta: [6, 6],
+		},
+		node,
+		[-3, 3],
+		[6, 6]
+	);
 
 	console.timeEnd();
 } else {
