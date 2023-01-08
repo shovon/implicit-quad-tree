@@ -564,6 +564,8 @@ const context = canvas.getContext("2d");
 
 console.time();
 if (context) {
+	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - x;
+
 	// drawGraph(
 	// 	context,
 	// 	// (x, y) => -(y ** 2) + x ** 3 - x,
@@ -576,7 +578,8 @@ if (context) {
 	// console.log("Done drawing");
 
 	const node = createTree(
-		(x, y) => -y + x ** 2 - 0.01,
+		// (x, y) => -y + x ** 2 - 0.01,
+		zero,
 		0,
 		[-3, 3],
 		[6, 6],
@@ -622,7 +625,8 @@ if (context) {
 	marchingSquares(
 		context,
 		// (x, y) => -(y ** 2) + x ** 3 - x,
-		(x, y) => -y + x ** 2 - 0.01,
+		// (x, y) => -y + x ** 2 - 0.01,
+		zero,
 		{
 			from: [-3, 3],
 			delta: [6, 6],
