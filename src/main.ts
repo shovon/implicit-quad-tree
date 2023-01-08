@@ -554,6 +554,84 @@ function marchingSquares(
 	}
 }
 
+function marchingSquaresSmoothed(
+	context: CanvasRenderingContext2D,
+	zero: (x: number, y: number) => number,
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	node: QuadTreeNode | null,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number]
+) {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+
+	if (node) {
+		const dxHalf = dx / 2;
+		const dyHalf = dy / 2;
+		const deltaHalf = [dxHalf, dyHalf] as const;
+
+		marchingSquares(context, zero, fromDelta, node.topLeft, [x, y], deltaHalf);
+		marchingSquares(
+			context,
+			zero,
+			fromDelta,
+			node.topRight,
+			[x + dxHalf, y],
+			deltaHalf
+		);
+		marchingSquares(
+			context,
+			zero,
+			fromDelta,
+			node.bottomLeft,
+			[x, y - dyHalf],
+			deltaHalf
+		);
+		marchingSquares(
+			context,
+			zero,
+			fromDelta,
+			node.bottomRight,
+			[x + dxHalf, y - dyHalf],
+			deltaHalf
+		);
+	} else {
+		console.log();
+
+		const tl = (Math.ceil(Math.sign(zero(x, y)) * 0.9) | 0) << 3;
+		const tr = (Math.ceil(Math.sign(zero(x + dx, y)) * 0.9) | 0) << 2;
+		const br = (Math.ceil(Math.sign(zero(x + dx, y - dy)) * 0.9) | 0) << 1;
+		const bl = Math.ceil(Math.sign(zero(x, y - dy)) * 0.9) | 0;
+
+		const value = tl | tr | br | bl;
+
+		const lines = lut[value];
+		for (const line of lines) {
+			const { width, height } = context.canvas.getBoundingClientRect();
+
+			const [fromX, fromY] = pointToAbsolute(
+				fromDelta,
+				[x + dx * line[0][0], y - dx * line[0][1]],
+				[width, height]
+			);
+			const [toX, toY] = pointToAbsolute(
+				fromDelta,
+				[x + dx * line[1][0], y - dx * line[1][1]],
+				[width, height]
+			);
+
+			context.strokeStyle = "red";
+			context.beginPath();
+			context.moveTo(fromX, fromY);
+			context.lineTo(toX, toY);
+			context.stroke();
+		}
+	}
+}
+
 const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
 canvas.width = 800;
 canvas.height = 600;
