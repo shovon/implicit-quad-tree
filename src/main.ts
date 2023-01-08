@@ -521,39 +521,36 @@ function marchingSquares(
 			deltaHalf
 		);
 	} else {
-		console.log(
-			Math.sign(zero(x, y)),
-			Math.sign(zero(x + dx, y)),
-			Math.sign(zero(x + dx, y + dy)),
-			Math.sign(zero(x, y + dy))
-		);
-		let dotDrawn = false;
-		if (contourPresent(zero, [x, y], [dx, dy])) {
-			if (Math.sign(zero(x, y)) !== Math.sign(zero(x + dx, y))) {
-				drawDot(context, fromDelta, [x + dx / 2, y]);
-				dotDrawn = true;
-			}
+		console.log();
 
-			if (Math.sign(zero(x + dx, y)) !== Math.sign(zero(x + dx, y + dy))) {
-				drawDot(context, fromDelta, [x + dx, y + dy / 2]);
-				dotDrawn = true;
-			}
+		const tl = (Math.ceil(Math.sign(zero(x, y)) * 0.9) | 0) << 3;
+		const tr = (Math.ceil(Math.sign(zero(x + dx, y)) * 0.9) | 0) << 2;
+		const br = (Math.ceil(Math.sign(zero(x + dx, y - dy)) * 0.9) | 0) << 1;
+		const bl = Math.ceil(Math.sign(zero(x, y - dy)) * 0.9) | 0;
 
-			if (Math.sign(zero(x + dx, y + dy)) !== Math.sign(zero(x, y + dy))) {
-				drawDot(context, fromDelta, [x + dx / 2, y + dy]);
-				dotDrawn = true;
-			}
+		const value = tl | tr | br | bl;
 
-			if (Math.sign(zero(x, y + dy)) !== Math.sign(zero(x, y))) {
-				drawDot(context, fromDelta, [x, y + dy / 2]);
-				dotDrawn = true;
-			}
+		const lines = lut[value];
+		for (const line of lines) {
+			const { width, height } = context.canvas.getBoundingClientRect();
+
+			const [fromX, fromY] = pointToAbsolute(
+				fromDelta,
+				[x + dx * line[0][0], y - dx * line[0][1]],
+				[width, height]
+			);
+			const [toX, toY] = pointToAbsolute(
+				fromDelta,
+				[x + dx * line[1][0], y - dx * line[1][1]],
+				[width, height]
+			);
+
+			context.strokeStyle = "red";
+			context.beginPath();
+			context.moveTo(fromX, fromY);
+			context.lineTo(toX, toY);
+			context.stroke();
 		}
-
-		console.assert(
-			dotDrawn === contourPresent(zero, [x, y], [dx, dy]),
-			"A contour should not have been drawn but one was drawn anyways!"
-		);
 	}
 }
 
@@ -609,7 +606,20 @@ if (context) {
 		);
 	}
 
-	drawPoints(
+	// drawPoints(
+	// 	context,
+	// 	// (x, y) => -(y ** 2) + x ** 3 - x,
+	// 	(x, y) => -y + x ** 2 - 0.01,
+	// 	{
+	// 		from: [-3, 3],
+	// 		delta: [6, 6],
+	// 	},
+	// 	node,
+	// 	[-3, 3],
+	// 	[6, 6]
+	// );
+
+	marchingSquares(
 		context,
 		// (x, y) => -(y ** 2) + x ** 3 - x,
 		(x, y) => -y + x ** 2 - 0.01,
