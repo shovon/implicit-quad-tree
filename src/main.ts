@@ -50,7 +50,8 @@ const lut: [Side, Side][][] = [
 	[],
 ];
 
-// This is a helper function to convert coordinates to screen space
+// This is a helper function to convert coordinates to screen space. Perhaps
+// the use of a projection matrix will be much better
 function pointToAbsolute(
 	// TODO: find another name for this.
 	//   effectively, what's going on is that this is giving us a range from the
@@ -107,6 +108,9 @@ function drawBox(
 	context.strokeRect(x, y, boxWidth, boxHeight);
 }
 
+// Converts a hierarchical tree into individual boxes.
+//
+// This was purely for debugging purposes
 function getBoxes(
 	fromDelta: {
 		readonly from: readonly [number, number];
@@ -151,6 +155,7 @@ function getBoxes(
 	return arr;
 }
 
+// This is useful. Generalizable across domains
 function getIntercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
 	const m = (y2 - y1) / (x2 - x1);
 	const b = y1 - m * x1;
@@ -295,6 +300,77 @@ function marchingSquaresLinearInterpolated(
 		}
 	}
 }
+
+type LinkListNode = {
+	value: Point2D;
+	next: LinkListNode | null;
+	[Symbol.iterator](): IterableIterator<Point2D>;
+};
+
+class LinkAdjacencyList {
+	private _map: Map<number, Map<number, Point2D>> = new Map();
+
+	private addNode([x]: Point2D): Map<number, Point2D> {
+		let xMap = this._map.get(x);
+		if (!xMap) {
+			xMap = new Map();
+			this._map.set(x, xMap);
+		}
+		return xMap;
+	}
+
+	linkNode(from: Point2D, to: Point2D) {
+		const fromXMap = this.addNode(from);
+		this.addNode(to);
+
+		fromXMap.set(from[1], to);
+	}
+
+	*getGraphs(): IterableIterator<LinkListNode> {
+		const visited: Map<number, number> = new Map();
+
+		for (const [x, xMap] of this._map) {
+			for (const [y] of xMap) {
+				if (visited.get(x) !== y) {
+					const result = this.traverse([x, y], visited);
+					if (result) {
+						yield result;
+					}
+				}
+			}
+		}
+	}
+
+	private traverse(
+		[x, y]: Point2D,
+		visited: Map<number, number>
+	): LinkListNode | null {
+		const xMap = this._map.get(x);
+		if (!xMap) {
+			return null;
+		}
+
+		visited.set(x, y);
+
+		const next = xMap.get(y);
+
+		const point = [x, y] satisfies Point2D;
+		const nextNode = next ? this.traverse(next, visited) : null;
+
+		return {
+			value: point,
+			next: nextNode,
+			*[Symbol.iterator]() {
+				yield point;
+				if (nextNode) {
+					yield* nextNode;
+				}
+			},
+		};
+	}
+}
+
+function marchingSquaresToGraph() {}
 
 const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
 canvas.width = 800;
