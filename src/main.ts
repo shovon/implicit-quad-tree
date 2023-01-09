@@ -4,115 +4,43 @@ type Side = "upper" | "lower" | "left" | "right";
 
 type Point2D = [number, number];
 
-const lut: [Point2D, Point2D][][] = [
+const lut: [Side, Side][][] = [
 	// 0 nothing
 	[],
 	// 1 bottom left
-	[
-		[
-			[0, 0.5],
-			[0.5, 1],
-		],
-	],
+	[["lower", "left"]],
 	// 2 bottom right
-	[
-		[
-			[0.5, 1],
-			[1, 0.5],
-		],
-	],
+	[["lower", "right"]],
 	// 3 horizontal
-	[
-		[
-			[0, 0.5],
-			[1, 0.5],
-		],
-	],
+	[["left", "right"]],
 	// 4 top right
-	[
-		[
-			[0.5, 0],
-			[1, 0.5],
-		],
-	],
+	[["upper", "right"]],
 	// 5 top left bottom right
 	[
-		[
-			[0.5, 0],
-			[0, 0.5],
-		],
-		[
-			[1, 0.5],
-			[0.5, 1],
-		],
+		["upper", "left"],
+		["lower", "right"],
 	],
 	// 6 vertical
-	[
-		[
-			[0.5, 0],
-			[0.5, 1],
-		],
-	],
+	[["upper", "lower"]],
 	// 7 top left
-	[
-		[
-			[0.5, 0],
-			[0, 0.5],
-		],
-	],
+	[["upper", "left"]],
 	// 8 top left
-	[
-		[
-			[0.5, 0],
-			[0, 0.5],
-		],
-	],
+	[["upper", "left"]],
 	// 9 vertical
-	[
-		[
-			[0.5, 0],
-			[0.5, 1],
-		],
-	],
+	[["upper", "lower"]],
 	// 10 top right bottom left
 	[
-		[
-			[0.5, 0],
-			[1, 0.5],
-		],
-		[
-			[0, 0.5],
-			[0.5, 1],
-		],
+		["upper", "right"],
+		["lower", "left"],
 	],
 	// 11 top right
-	[
-		[
-			[0.5, 0],
-			[1, 0.5],
-		],
-	],
+	[["upper", "right"]],
 	// 12 horizontal
-	[
-		[
-			[0, 0.5],
-			[1, 0.5],
-		],
-	],
+	[["left", "right"]],
 	// 13 bottom right
-	[
-		[
-			[0.5, 1],
-			[1, 0.5],
-		],
-	],
+	[["lower", "right"]],
 	// 14 bottom left
-	[
-		[
-			[0, 0.5],
-			[0.5, 1],
-		],
-	],
+	[["lower", "left"]],
 	[],
 ];
 
@@ -124,7 +52,7 @@ type QuadTreeNode = {
 };
 
 function contourPresent(
-	zero: (x: number, y: number) => number,
+	fn: (x: number, y: number) => number,
 	[x, y]: readonly [number, number],
 	[dx, dy]: readonly [number, number]
 ): boolean {
@@ -134,10 +62,10 @@ function contourPresent(
 	return (
 		Math.round(
 			Math.abs(
-				Math.sign(zero(x, y)) +
-					Math.sign(zero(x + dx, y)) +
-					Math.sign(zero(x, y - dy)) +
-					Math.sign(zero(x + dx, y - dy))
+				Math.sign(fn(x, y)) +
+					Math.sign(fn(x + dx, y)) +
+					Math.sign(fn(x, y - dy)) +
+					Math.sign(fn(x + dx, y - dy))
 			)
 		) !== 4
 	);
@@ -255,7 +183,7 @@ function drawBox(
 	const boxWidth = dimensions[1] * (width / fromDelta.delta[0]);
 	const boxHeight = dimensions[1] * (height / fromDelta.delta[1]);
 
-	context.strokeStyle = "black";
+	context.strokeStyle = "rgba(0, 0, 0, 0.125)";
 	context.lineWidth = 1;
 	context.strokeRect(x, y, boxWidth, boxHeight);
 }
@@ -476,7 +404,14 @@ function drawGraph(
 	);
 }
 
-function marchingSquares(
+function getIntercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
+	const m = (y2 - y1) / (x2 - x1);
+	const b = y1 - m * x1;
+	// console.log(y2 - y1, x2 - x1);
+	return -b / m;
+}
+
+function marchingSquaresNoneHardcoded(
 	context: CanvasRenderingContext2D,
 	zero: (x: number, y: number) => number,
 	fromDelta: {
@@ -495,8 +430,15 @@ function marchingSquares(
 		const dyHalf = dy / 2;
 		const deltaHalf = [dxHalf, dyHalf] as const;
 
-		marchingSquares(context, zero, fromDelta, node.topLeft, [x, y], deltaHalf);
-		marchingSquares(
+		marchingSquaresNoneHardcoded(
+			context,
+			zero,
+			fromDelta,
+			node.topLeft,
+			[x, y],
+			deltaHalf
+		);
+		marchingSquaresNoneHardcoded(
 			context,
 			zero,
 			fromDelta,
@@ -504,7 +446,7 @@ function marchingSquares(
 			[x + dxHalf, y],
 			deltaHalf
 		);
-		marchingSquares(
+		marchingSquaresNoneHardcoded(
 			context,
 			zero,
 			fromDelta,
@@ -512,7 +454,7 @@ function marchingSquares(
 			[x, y - dyHalf],
 			deltaHalf
 		);
-		marchingSquares(
+		marchingSquaresNoneHardcoded(
 			context,
 			zero,
 			fromDelta,
@@ -530,31 +472,61 @@ function marchingSquares(
 
 		const value = tl | tr | br | bl;
 
-		const lines = lut[value];
+		const lines = lut[value]; // Usually 1 or 2 lines
 		for (const line of lines) {
 			const { width, height } = context.canvas.getBoundingClientRect();
 
+			const points: Point2D[] = [];
+
+			for (const direction of line) {
+				switch (direction) {
+					case "upper":
+						// Get the top point.
+						points.push([x + dx / 2, y]);
+						break;
+					case "right":
+						// Get the right point.
+						points.push([x + dx, y - dy / 2]);
+						break;
+					case "lower":
+						// get the bottom point
+						points.push([x + dx / 2, y - dy]);
+						break;
+					case "left":
+						points.push([x, y - dy / 2]);
+						break;
+				}
+			}
+
+			const [first, ...remainder] = points;
+
 			const [fromX, fromY] = pointToAbsolute(
 				fromDelta,
-				[x + dx * line[0][0], y - dx * line[0][1]],
-				[width, height]
-			);
-			const [toX, toY] = pointToAbsolute(
-				fromDelta,
-				[x + dx * line[1][0], y - dx * line[1][1]],
+				[first[0], first[1]],
 				[width, height]
 			);
 
 			context.strokeStyle = "red";
 			context.beginPath();
+
 			context.moveTo(fromX, fromY);
-			context.lineTo(toX, toY);
+
+			for (const to of remainder) {
+				const [toX, toY] = pointToAbsolute(
+					fromDelta,
+					[to[0], to[1]],
+					[width, height]
+				);
+
+				context.lineTo(toX, toY);
+			}
+
 			context.stroke();
 		}
 	}
 }
 
-function marchingSquaresSmoothed(
+function marchingSquaresLinearInterpolated(
 	context: CanvasRenderingContext2D,
 	zero: (x: number, y: number) => number,
 	fromDelta: {
@@ -573,8 +545,15 @@ function marchingSquaresSmoothed(
 		const dyHalf = dy / 2;
 		const deltaHalf = [dxHalf, dyHalf] as const;
 
-		marchingSquares(context, zero, fromDelta, node.topLeft, [x, y], deltaHalf);
-		marchingSquares(
+		marchingSquaresLinearInterpolated(
+			context,
+			zero,
+			fromDelta,
+			node.topLeft,
+			[x, y],
+			deltaHalf
+		);
+		marchingSquaresLinearInterpolated(
 			context,
 			zero,
 			fromDelta,
@@ -582,7 +561,7 @@ function marchingSquaresSmoothed(
 			[x + dxHalf, y],
 			deltaHalf
 		);
-		marchingSquares(
+		marchingSquaresLinearInterpolated(
 			context,
 			zero,
 			fromDelta,
@@ -590,7 +569,7 @@ function marchingSquaresSmoothed(
 			[x, y - dyHalf],
 			deltaHalf
 		);
-		marchingSquares(
+		marchingSquaresLinearInterpolated(
 			context,
 			zero,
 			fromDelta,
@@ -608,25 +587,79 @@ function marchingSquaresSmoothed(
 
 		const value = tl | tr | br | bl;
 
-		const lines = lut[value];
+		const lines = lut[value]; // Usually 1 or 2 lines
 		for (const line of lines) {
 			const { width, height } = context.canvas.getBoundingClientRect();
 
+			const points: Point2D[] = [];
+
+			for (const direction of line) {
+				switch (direction) {
+					case "upper":
+						{
+							// Get the top point.
+							const point = [
+								getIntercept([x, zero(x, y)], [x + dx, zero(x + dx, y)]),
+								y,
+							] satisfies Point2D;
+							points.push(point);
+						}
+						break;
+					case "right":
+						{
+							// Get the right point.
+							const point = [
+								x + dx,
+								getIntercept(
+									[y, zero(x + dx, y)],
+									[y - dx, zero(x + dx, y - dy)]
+								),
+							] satisfies Point2D;
+							points.push(point);
+						}
+						break;
+					case "lower":
+						// get the bottom point
+						points.push([
+							getIntercept(
+								[x, zero(x, y - dy)],
+								[x + dx, zero(x + dx, y - dy)]
+							),
+							y - dy,
+						]);
+						break;
+					case "left":
+						points.push([
+							x,
+							getIntercept([y, zero(x, y)], [y - dy, zero(x, y - dy)]),
+						]);
+						break;
+				}
+			}
+
+			const [first, ...remainder] = points;
+
 			const [fromX, fromY] = pointToAbsolute(
 				fromDelta,
-				[x + dx * line[0][0], y - dx * line[0][1]],
-				[width, height]
-			);
-			const [toX, toY] = pointToAbsolute(
-				fromDelta,
-				[x + dx * line[1][0], y - dx * line[1][1]],
+				[first[0], first[1]],
 				[width, height]
 			);
 
 			context.strokeStyle = "red";
 			context.beginPath();
+
 			context.moveTo(fromX, fromY);
-			context.lineTo(toX, toY);
+
+			for (const to of remainder) {
+				const [toX, toY] = pointToAbsolute(
+					fromDelta,
+					[to[0], to[1]],
+					[width, height]
+				);
+
+				context.lineTo(toX, toY);
+			}
+
 			context.stroke();
 		}
 	}
@@ -642,7 +675,7 @@ const context = canvas.getContext("2d");
 
 console.time();
 if (context) {
-	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - x;
+	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - x + 1;
 
 	// drawGraph(
 	// 	context,
@@ -662,7 +695,7 @@ if (context) {
 		[-3, 3],
 		[6, 6],
 		1,
-		6
+		5
 	);
 
 	const boxes = getBoxes(
@@ -700,7 +733,35 @@ if (context) {
 	// 	[6, 6]
 	// );
 
-	marchingSquares(
+	// marchingSquares(
+	// 	context,
+	// 	// (x, y) => -(y ** 2) + x ** 3 - x,
+	// 	// (x, y) => -y + x ** 2 - 0.01,
+	// 	zero,
+	// 	{
+	// 		from: [-3, 3],
+	// 		delta: [6, 6],
+	// 	},
+	// 	node,
+	// 	[-3, 3],
+	// 	[6, 6]
+	// );
+
+	// marchingSquaresNoneHardcoded(
+	// 	context,
+	// 	// (x, y) => -(y ** 2) + x ** 3 - x,
+	// 	// (x, y) => -y + x ** 2 - 0.01,
+	// 	zero,
+	// 	{
+	// 		from: [-3, 3],
+	// 		delta: [6, 6],
+	// 	},
+	// 	node,
+	// 	[-3, 3],
+	// 	[6, 6]
+	// );
+
+	marchingSquaresLinearInterpolated(
 		context,
 		// (x, y) => -(y ** 2) + x ** 3 - x,
 		// (x, y) => -y + x ** 2 - 0.01,
