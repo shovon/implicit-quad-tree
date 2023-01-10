@@ -1,3 +1,5 @@
+const { round, abs, sign } = Math;
+
 export type QuadTreeNode = {
 	readonly topLeft: QuadTreeNode | null;
 	readonly topRight: QuadTreeNode | null;
@@ -14,20 +16,22 @@ function contourPresent(
 	console.assert(dy > 0);
 
 	return (
-		Math.round(
-			Math.abs(
-				Math.sign(fn(x, y)) +
-					Math.sign(fn(x + dx, y)) +
-					Math.sign(fn(x, y - dy)) +
-					Math.sign(fn(x + dx, y - dy))
+		round(
+			abs(
+				sign(fn(x, y)) +
+					sign(fn(x + dx, y)) +
+					sign(fn(x, y - dy)) +
+					sign(fn(x + dx, y - dy))
 			)
 		) !== 4
 	);
 }
 
+type Fn = (x: number, y: number) => number;
+
 // This is the most important function out of them all
 export function createTree(
-	zero: (x: number, y: number) => number,
+	fn: Fn,
 	depth: number,
 	[x, y]: readonly [number, number],
 	[dx, dy]: readonly [number, number],
@@ -43,39 +47,18 @@ export function createTree(
 		const newDepth = depth + 1;
 		const newDx = dx / 2;
 		const newDy = dy / 2;
+
+		const newDelta = [newDx, newDy] satisfies [number, number];
+
+		function c(vec: readonly [number, number]) {
+			return createTree(fn, newDepth, vec, newDelta, searchDepth, plotDepth);
+		}
+
 		return {
-			topLeft: createTree(
-				zero,
-				newDepth,
-				[x, y],
-				[newDx, newDy],
-				searchDepth,
-				plotDepth
-			),
-			topRight: createTree(
-				zero,
-				newDepth,
-				[x + newDx, y],
-				[newDx, newDy],
-				searchDepth,
-				plotDepth
-			),
-			bottomLeft: createTree(
-				zero,
-				newDepth,
-				[x, y - newDy],
-				[newDx, newDy],
-				searchDepth,
-				plotDepth
-			),
-			bottomRight: createTree(
-				zero,
-				newDepth,
-				[x + newDx, y - newDy],
-				[newDx, newDy],
-				searchDepth,
-				plotDepth
-			),
+			topLeft: c([x, y]),
+			topRight: c([x + newDx, y]),
+			bottomLeft: c([x, y - newDy]),
+			bottomRight: c([x + newDx, y - newDy]),
 		};
 	}
 
@@ -83,7 +66,7 @@ export function createTree(
 		return subDivide();
 	}
 
-	if (contourPresent(zero, [x, y], [dx, dy])) {
+	if (contourPresent(fn, [x, y], [dx, dy])) {
 		if (depth < searchDepth + plotDepth) {
 			return subDivide();
 		}
