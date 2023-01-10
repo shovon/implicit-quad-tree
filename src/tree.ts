@@ -104,7 +104,7 @@ type LinkListNode = {
 	[Symbol.iterator](): IterableIterator<[number, number]>;
 };
 
-class LinkAdjacencyList {
+export class LinkAdjacencyList {
 	private _map: Map<number, Map<number, [number, number]>> = new Map();
 
 	private addNode([x]: [number, number]): Map<number, [number, number]> {
@@ -180,7 +180,7 @@ function intercept(
 	return -b / m;
 }
 
-function computeLinkedLists(
+export function computeLinkedLists(
 	list: LinkAdjacencyList,
 	fn: (x: number, y: number) => number,
 	node: QuadTreeNode | null,
@@ -216,9 +216,9 @@ function computeLinkedLists(
 		const lines = lut[value];
 
 		for (const line of lines) {
-			for (const direction of line) {
-				const points: [number, number][] = [];
+			const points: [number, number][] = [];
 
+			for (const direction of line) {
 				switch (direction) {
 					case "upper":
 						points.push([intercept([x, fn(x, y)], [x + dx, fn(x + dx, y)]), y]);
@@ -239,20 +239,20 @@ function computeLinkedLists(
 						points.push([x, intercept([y, fn(x, y)], [y - dy, fn(x, y - dy)])]);
 						break;
 				}
-
-				const [from, to] = points;
-				if (!from) {
-					console.error("Expected exactly two points, but got none");
-					continue;
-				}
-
-				if (!to) {
-					console.error("Expected exactly two points, but got one");
-					continue;
-				}
-
-				list.linkNode(from, to);
 			}
+
+			const [from, to] = points;
+			if (!from) {
+				console.error("Expected exactly two points, but got none");
+				continue;
+			}
+
+			if (!to) {
+				console.error("Expected exactly two points, but got one");
+				continue;
+			}
+
+			list.linkNode(from, to);
 		}
 	}
 }

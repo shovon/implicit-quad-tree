@@ -1,7 +1,12 @@
 // Implementation of this paper
 // https://academic.oup.com/comjnl/article/33/5/402/480353
 
-import { createTree, QuadTreeNode } from "./tree";
+import {
+	computeLinkedLists,
+	createTree,
+	LinkAdjacencyList,
+	QuadTreeNode,
+} from "./tree";
 
 // Inspiration from this article
 // https://www.mattkeeter.com/projects/contours/
@@ -316,17 +321,45 @@ if (context) {
 		);
 	}
 
-	marchingSquaresLinearInterpolated(
-		context,
-		zero,
-		{
-			from: [-3, 3],
-			delta: [6, 6],
-		},
-		node,
-		[-3, 3],
-		[6, 6]
-	);
+	// marchingSquaresLinearInterpolated(
+	// 	context,
+	// 	zero,
+	// 	{
+	// 		from: [-3, 3],
+	// 		delta: [6, 6],
+	// 	},
+	// 	node,
+	// 	[-3, 3],
+	// 	[6, 6]
+	// );
+
+	const list = new LinkAdjacencyList();
+
+	computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
+
+	for (const graph of list.graphs) {
+		let isFirst = true;
+		context.strokeStyle = "red";
+		for (const point of graph) {
+			const [x, y] = pointToAbsolute(
+				{
+					from: [-3, 3],
+					delta: [6, 6],
+				},
+				point,
+				getContextDimensions(context)
+			);
+
+			if (isFirst) {
+				isFirst = false;
+				context.moveTo(x, y);
+			} else {
+				context.lineTo(x, y);
+			}
+		}
+
+		context.stroke();
+	}
 
 	console.timeEnd();
 } else {
