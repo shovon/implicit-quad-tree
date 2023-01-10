@@ -11,41 +11,26 @@ type Side = "upper" | "lower" | "left" | "right";
 type Point2D = [number, number];
 
 const lut: [Side, Side][][] = [
-	// 0 nothing
 	[],
-	// 1 bottom left
 	[["lower", "left"]],
-	// 2 bottom right
 	[["lower", "right"]],
-	// 3 horizontal
 	[["left", "right"]],
-	// 4 top right
 	[["upper", "right"]],
-	// 5 top left bottom right
 	[
 		["upper", "left"],
 		["lower", "right"],
 	],
-	// 6 vertical
 	[["upper", "lower"]],
-	// 7 top left
 	[["upper", "left"]],
-	// 8 top left
 	[["upper", "left"]],
-	// 9 vertical
 	[["upper", "lower"]],
-	// 10 top right bottom left
 	[
 		["upper", "right"],
 		["lower", "left"],
 	],
-	// 11 top right
 	[["upper", "right"]],
-	// 12 horizontal
 	[["left", "right"]],
-	// 13 bottom right
 	[["lower", "right"]],
-	// 14 bottom left
 	[["lower", "left"]],
 	[],
 ];
@@ -156,7 +141,7 @@ function getBoxes(
 }
 
 // This is useful. Generalizable across domains
-function getIntercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
+function intercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
 	const m = (y2 - y1) / (x2 - x1);
 	const b = y1 - m * x1;
 	return -b / m;
@@ -235,7 +220,7 @@ function marchingSquaresLinearInterpolated(
 						{
 							// Get the top point.
 							const point = [
-								getIntercept([x, zero(x, y)], [x + dx, zero(x + dx, y)]),
+								intercept([x, zero(x, y)], [x + dx, zero(x + dx, y)]),
 								y,
 							] satisfies Point2D;
 							points.push(point);
@@ -246,10 +231,7 @@ function marchingSquaresLinearInterpolated(
 							// Get the right point.
 							const point = [
 								x + dx,
-								getIntercept(
-									[y, zero(x + dx, y)],
-									[y - dx, zero(x + dx, y - dy)]
-								),
+								intercept([y, zero(x + dx, y)], [y - dx, zero(x + dx, y - dy)]),
 							] satisfies Point2D;
 							points.push(point);
 						}
@@ -257,17 +239,14 @@ function marchingSquaresLinearInterpolated(
 					case "lower":
 						// get the bottom point
 						points.push([
-							getIntercept(
-								[x, zero(x, y - dy)],
-								[x + dx, zero(x + dx, y - dy)]
-							),
+							intercept([x, zero(x, y - dy)], [x + dx, zero(x + dx, y - dy)]),
 							y - dy,
 						]);
 						break;
 					case "left":
 						points.push([
 							x,
-							getIntercept([y, zero(x, y)], [y - dy, zero(x, y - dy)]),
+							intercept([y, zero(x, y)], [y - dy, zero(x, y - dy)]),
 						]);
 						break;
 				}
@@ -300,77 +279,6 @@ function marchingSquaresLinearInterpolated(
 		}
 	}
 }
-
-type LinkListNode = {
-	value: Point2D;
-	next: LinkListNode | null;
-	[Symbol.iterator](): IterableIterator<Point2D>;
-};
-
-class LinkAdjacencyList {
-	private _map: Map<number, Map<number, Point2D>> = new Map();
-
-	private addNode([x]: Point2D): Map<number, Point2D> {
-		let xMap = this._map.get(x);
-		if (!xMap) {
-			xMap = new Map();
-			this._map.set(x, xMap);
-		}
-		return xMap;
-	}
-
-	linkNode(from: Point2D, to: Point2D) {
-		const fromXMap = this.addNode(from);
-		this.addNode(to);
-
-		fromXMap.set(from[1], to);
-	}
-
-	*getGraphs(): IterableIterator<LinkListNode> {
-		const visited: Map<number, number> = new Map();
-
-		for (const [x, xMap] of this._map) {
-			for (const [y] of xMap) {
-				if (visited.get(x) !== y) {
-					const result = this.traverse([x, y], visited);
-					if (result) {
-						yield result;
-					}
-				}
-			}
-		}
-	}
-
-	private traverse(
-		[x, y]: Point2D,
-		visited: Map<number, number>
-	): LinkListNode | null {
-		const xMap = this._map.get(x);
-		if (!xMap) {
-			return null;
-		}
-
-		visited.set(x, y);
-
-		const next = xMap.get(y);
-
-		const point = [x, y] satisfies Point2D;
-		const nextNode = next ? this.traverse(next, visited) : null;
-
-		return {
-			value: point,
-			next: nextNode,
-			*[Symbol.iterator]() {
-				yield point;
-				if (nextNode) {
-					yield* nextNode;
-				}
-			},
-		};
-	}
-}
-
-function marchingSquaresToGraph() {}
 
 const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
 canvas.width = 800;
