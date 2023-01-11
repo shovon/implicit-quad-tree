@@ -98,29 +98,52 @@ export function createTree(
 	return null;
 }
 
-type LinkListNode = {
-	value: [number, number];
-	next: LinkListNode | null;
-	[Symbol.iterator](): IterableIterator<[number, number]>;
-};
+type Value = any;
 
-export class LinkAdjacencyList {
-	private _map: Map<number, Map<number, [number, number]>> = new Map();
+// We want to find true neigbouring blocks
 
-	private addNode([x]: [number, number]): Map<number, [number, number]> {
-		let xMap = this._map.get(x);
-		if (!xMap) {
-			xMap = new Map();
-			this._map.set(x, xMap);
-		}
-		return xMap;
+class LinkListNode {
+	private previous: LinkListNode | null = null;
+	private next: LinkListNode | null = null;
+
+	constructor(private value: Value) {}
+}
+
+class LinkList {
+	private head: LinkListNode | null = null;
+	private tail: LinkListNode | null = null;
+
+	constructor(value: Value) {
+		this.head = new LinkListNode(value);
+		this.tail = this.head;
 	}
 
-	linkNode(from: [number, number], to: [number, number]) {
-		const fromXMap = this.addNode(from);
-		this.addNode(to);
+	append(value: any) {}
+}
 
-		fromXMap.set(from[1], to);
+class LeafList<K, V> {
+	map: Map<K, V>;
+}
+
+export class LinkAdjacencyList {
+	private _map: TupleMap<Point2D, TupleSet<Point2D>> = new TupleMap(
+		new TupleMap()
+	);
+
+	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
+		let list = this._map.get(from);
+		if (!list) {
+			list = new TupleSet();
+			this._map.set(from, list);
+		}
+		list.add(to);
+
+		list = this._map.get(to);
+		if (!list) {
+			list = new TupleSet();
+			this._map.set(to, list);
+		}
+		list.add(from);
 	}
 
 	get graphs() {
