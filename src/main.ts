@@ -8,6 +8,10 @@ import {
 	QuadTreeNode,
 } from "./tree";
 
+import { TupleMap } from "./map";
+
+const tm = new TupleMap<number, string>();
+
 // Inspiration from this article
 // https://www.mattkeeter.com/projects/contours/
 

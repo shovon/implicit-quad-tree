@@ -111,23 +111,16 @@ class LinkListNode {
 	constructor(private value: Value) {}
 }
 
-class LinkList {
-	private head: LinkListNode | null = null;
-	private tail: LinkListNode | null = null;
-
-	constructor(value: Value) {
-		this.head = new LinkListNode(value);
-		this.tail = this.head;
-	}
-
-	append(value: any) {}
-}
-
-class LeafList<K, V> {
-	map: Map<K, V>;
-}
-
 export type Point2D = [number, number];
+
+type Optional<V> = { value: V } | null;
+
+function first<V>(iterable: Iterable<V>): Optional<V> {
+	for (const value of iterable) {
+		return { value };
+	}
+	return null;
+}
 
 export class LinkAdjacencyList {
 	private _map: TupleMap<Point2D, TupleSet<Point2D>> = new TupleMap(
@@ -135,19 +128,26 @@ export class LinkAdjacencyList {
 	);
 
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
+		// Get the adjacency associated with `from`
 		let list = this._map.get(from);
 		if (!list) {
 			list = new TupleSet();
 			this._map.set(from, list);
 		}
+		// Append the destination
 		list.add(to);
 
+		// Get the adjacency associated with `to`
 		list = this._map.get(to);
 		if (!list) {
 			list = new TupleSet();
 			this._map.set(to, list);
 		}
+		// Append the source
 		list.add(from);
+
+		// Effectively, this should allow us to implement an adjacency list
+		// representing a doubly linked list
 	}
 
 	get graphs() {
@@ -155,47 +155,23 @@ export class LinkAdjacencyList {
 	}
 
 	private *getGraphs(): IterableIterator<LinkListNode> {
-		const visited: Map<number, number> = new Map();
+		const visited: TupleSet<Point2D> = new TupleSet();
 
-		for (const [x, xMap] of this._map) {
-			for (const [y] of xMap) {
-				if (visited.get(x) !== y) {
-					const result = this.traverse([x, y], visited);
-					if (result) {
-						yield result;
-					}
-				}
+		const copied = new TupleMap(this._map);
+
+		while (copied.size > 0) {
+			const optional = first(copied);
+			if (optional) {
+				const [side] = optional.value;
+				this.traverse(side, visited);
 			}
 		}
 	}
 
 	private traverse(
-		[x, y]: [number, number],
-		visited: Map<number, number>
-	): LinkListNode | null {
-		const xMap = this._map.get(x);
-		if (!xMap) {
-			return null;
-		}
-
-		visited.set(x, y);
-
-		const next = xMap.get(y);
-
-		const point = [x, y] satisfies [number, number];
-		const nextNode = next ? this.traverse(next, visited) : null;
-
-		return {
-			value: point,
-			next: nextNode,
-			*[Symbol.iterator]() {
-				yield point;
-				if (nextNode) {
-					yield* nextNode;
-				}
-			},
-		};
-	}
+		side: [Point2D, Point2D],
+		visited: TupleSet<Point2D>
+	): LinkListNode | null {}
 }
 
 function intercept(

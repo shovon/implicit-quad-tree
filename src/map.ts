@@ -22,8 +22,17 @@ export interface SetLike<V>
 	[Symbol.iterator](): IterableIterator<V>;
 }
 
-export class TupleMap<K, V> implements MapLike<[K, K], V> {
-	constructor(private _map: MapLike<K, Map<K, V>> = new Map()) {}
+export class TupleMap<K, V>
+	implements MapLike<[K, K], V>, Iterable<[[K, K], V]>
+{
+	constructor(
+		iterable: Iterable<[[K, K], V]> = [],
+		private _map: MapLike<K, Map<K, V>> = new Map()
+	) {
+		for (const [key, value] of iterable) {
+			this.set(key, value);
+		}
+	}
 
 	has([x, y]: [K, K]): boolean {
 		const m = this._map.get(x);
