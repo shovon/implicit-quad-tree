@@ -1,3 +1,5 @@
+import { TupleMap, TupleSet } from "./map";
+
 const { round, abs, sign, ceil } = Math;
 
 type Side = "upper" | "lower" | "left" | "right";
@@ -124,6 +126,8 @@ class LinkList {
 class LeafList<K, V> {
 	map: Map<K, V>;
 }
+
+export type Point2D = [number, number];
 
 export class LinkAdjacencyList {
 	private _map: TupleMap<Point2D, TupleSet<Point2D>> = new TupleMap(

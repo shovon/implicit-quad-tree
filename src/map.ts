@@ -22,8 +22,6 @@ export interface SetLike<V>
 	[Symbol.iterator](): IterableIterator<V>;
 }
 
-export type Point2D = [number, number];
-
 export class TupleMap<K, V> implements MapLike<[K, K], V> {
 	constructor(private _map: MapLike<K, Map<K, V>> = new Map()) {}
 
