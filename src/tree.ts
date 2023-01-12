@@ -4,6 +4,7 @@ const { round, abs, sign, ceil } = Math;
 
 type Side = "upper" | "lower" | "left" | "right";
 
+// TODO: perhaps avoiding strings
 const lut: [Side, Side][][] = [
 	[],
 	[["lower", "left"]],
@@ -104,11 +105,28 @@ type Value = any;
 
 // We want to find true neigbouring blocks
 
-class LinkListNode {
-	private previous: LinkListNode | null = null;
-	private next: LinkListNode | null = null;
+interface ILinkListNode<V> {
+	next: ILinkListNode<V> | null;
+	value: V;
+	[Symbol.iterator](): IterableIterator<V>;
+}
 
-	constructor(private value: Value) {}
+class LinkListNode<V> implements ILinkListNode<V> {
+	constructor(private _value: V, private _next: ILinkListNode<V> | null) {}
+
+	get value() {
+		return this._value;
+	}
+	get next() {
+		return this._next;
+	}
+
+	*[Symbol.iterator](): IterableIterator<V> {
+		yield this._value;
+		if (this._next) {
+			yield* this._next;
+		}
+	}
 }
 
 export type Point2D = [number, number];
@@ -122,11 +140,16 @@ function first<V>(iterable: Iterable<V>): Optional<V> {
 	return null;
 }
 
+/**
+ * The adjacency list to compute all linked lists by traversing all connected
+ * nodes in the (possibly disjoint) graph
+ */
 export class LinkAdjacencyList {
 	private _map: TupleMap<Point2D, TupleSet<Point2D>> = new TupleMap(
 		new TupleMap()
 	);
 
+	// Link two nodes
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
 		// Get the adjacency associated with `from`
 		let list = this._map.get(from);
@@ -154,24 +177,71 @@ export class LinkAdjacencyList {
 		return this.getGraphs();
 	}
 
-	private *getGraphs(): IterableIterator<LinkListNode> {
-		const visited: TupleSet<Point2D> = new TupleSet();
-
+	private *getGraphs(): IterableIterator<LinkListNode<[Point2D, Point2D]>> {
 		const copied = new TupleMap(this._map);
+
+		const roots: [Point2D, Point2D][] = [];
 
 		while (copied.size > 0) {
 			const optional = first(copied);
 			if (optional) {
 				const [side] = optional.value;
-				this.traverse(side, visited);
+				roots.push(LinkAdjacencyList.findRoot(side, copied, new TupleSet()));
+			}
+		}
+
+		for (const root of roots) {
+			const ll = LinkAdjacencyList.generateLinkedList(
+				root,
+				this._map,
+				new TupleSet()
+			);
+			if (ll) {
+				yield ll;
 			}
 		}
 	}
 
-	private traverse(
+	private static generateLinkedList(
 		side: [Point2D, Point2D],
+		map: TupleMap<Point2D, TupleSet<Point2D>>,
 		visited: TupleSet<Point2D>
-	): LinkListNode | null {}
+	): LinkListNode<[Point2D, Point2D]> | null {
+		const node = map.get(side);
+		map.delete(side);
+
+		const [next] = [...(node || [])].filter(
+			(neighbor) => !visited.has(neighbor)
+		);
+
+		if (!next) {
+			return null;
+		}
+
+		visited.add(side);
+
+		return new LinkListNode(side, this.generateLinkedList(side, map, visited));
+	}
+
+	private static findRoot(
+		side: [Point2D, Point2D],
+		map: TupleMap<Point2D, TupleSet<Point2D>>,
+		visited: TupleSet<Point2D>
+	): [Point2D, Point2D] {
+		map.delete(side);
+
+		const [next] = [...(map.get(side) || [])].filter(
+			(neighbor) => !visited.has(neighbor)
+		);
+
+		if (!next) {
+			return side;
+		}
+
+		visited.add(next);
+
+		return LinkAdjacencyList.findRoot(side, map, visited);
+	}
 }
 
 function intercept(
@@ -219,32 +289,38 @@ export function computeLinkedLists(
 		const lines = lut[value];
 
 		for (const line of lines) {
-			const points: [number, number][] = [];
+			const sides: [Point2D, Point2D][] = [];
 
 			for (const direction of line) {
 				switch (direction) {
 					case "upper":
-						points.push([intercept([x, fn(x, y)], [x + dx, fn(x + dx, y)]), y]);
+						sides.push([
+							[x, y],
+							[x + dx, y],
+						]);
 						break;
 					case "right":
-						points.push([
-							x + dx,
-							intercept([y, fn(x + dx, y)], [y - dx, fn(x + dx, y - dy)]),
+						sides.push([
+							[x + dx, y],
+							[x + dx, y - dy],
 						]);
 						break;
 					case "lower":
-						points.push([
-							intercept([x, fn(x, y - dy)], [x + dx, fn(x + dx, y - dy)]),
-							y - dy,
+						sides.push([
+							[x, y - dy],
+							[x + dx, y - dy],
 						]);
 						break;
 					case "left":
-						points.push([x, intercept([y, fn(x, y)], [y - dy, fn(x, y - dy)])]);
+						sides.push([
+							[x, y],
+							[x, y - dy],
+						]);
 						break;
 				}
 			}
 
-			const [from, to] = points;
+			const [from, to] = sides;
 			if (!from) {
 				console.error("Expected exactly two points, but got none");
 				continue;

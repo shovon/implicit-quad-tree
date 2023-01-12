@@ -10,6 +10,16 @@ import {
 
 import { TupleMap } from "./map";
 
+// General idea
+//
+// - we have a plane represented as a quad tree. Quad trees are recursive sub
+//   divisions of quadrants of a plane
+// - at every quadrant where there exists a sign reversal at any of the sides
+//   of the quadrant box, subdivide into another quadrant
+// - continue subdivision until we reach a maximum depth
+// - all quadrants will have either exactly 2 or 4 sign reversals
+// - run through all signs at edge of each quadrant and connect those "boxes"
+
 const tm = new TupleMap<number, string>();
 
 // Inspiration from this article
