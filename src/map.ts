@@ -27,7 +27,8 @@ export class TupleMap<K, V>
 {
 	constructor(
 		iterable: Iterable<[[K, K], V]> = [],
-		private _map: MapLike<K, Map<K, V>> = new Map()
+		private _rootMap: MapLike<K, MapLike<K, V>> = new Map(),
+		private subMapCreator: () => MapLike<K, V> = () => new Map()
 	) {
 		for (const [key, value] of iterable) {
 			this.set(key, value);
@@ -35,7 +36,7 @@ export class TupleMap<K, V>
 	}
 
 	has([x, y]: [K, K]): boolean {
-		const m = this._map.get(x);
+		const m = this._rootMap.get(x);
 		if (!m) {
 			return false;
 		}
@@ -43,7 +44,7 @@ export class TupleMap<K, V>
 	}
 
 	*entries(): IterableIterator<[[K, K], V]> {
-		for (const [x, map] of this._map) {
+		for (const [x, map] of this._rootMap) {
 			for (const [y, v] of map) {
 				yield [[x, y], v];
 			}
@@ -51,7 +52,7 @@ export class TupleMap<K, V>
 	}
 
 	forEach(cb: (value: V, key: [K, K], map: MapLike<[K, K], V>) => void) {
-		this._map.forEach((map, x) => {
+		this._rootMap.forEach((map, x) => {
 			map.forEach((v, y) => {
 				cb(v, [x, y], this);
 			});
@@ -59,7 +60,7 @@ export class TupleMap<K, V>
 	}
 
 	*keys(): IterableIterator<[K, K]> {
-		for (const [x, map] of this._map) {
+		for (const [x, map] of this._rootMap) {
 			for (const y of map.keys()) {
 				yield [x, y];
 			}
@@ -67,7 +68,7 @@ export class TupleMap<K, V>
 	}
 
 	*values(): IterableIterator<V> {
-		for (const map of this._map.values()) {
+		for (const map of this._rootMap.values()) {
 			for (const value of map.values()) {
 				yield value;
 			}
@@ -75,11 +76,14 @@ export class TupleMap<K, V>
 	}
 
 	get size() {
-		return [...this._map.values()].reduce((prev, next) => prev + next.size, 0);
+		return [...this._rootMap.values()].reduce(
+			(prev, next) => prev + next.size,
+			0
+		);
 	}
 
 	get([x, y]: [K, K]): V | undefined {
-		const m = this._map.get(x);
+		const m = this._rootMap.get(x);
 		if (!m) {
 			return;
 		}
@@ -87,27 +91,27 @@ export class TupleMap<K, V>
 	}
 
 	set([x, y]: [K, K], value: V): MapLike<[K, K], V> {
-		let m = this._map.get(x);
+		let m = this._rootMap.get(x);
 		if (!m) {
-			m = new Map();
-			this._map.set(x, m);
+			m = this.subMapCreator();
+			this._rootMap.set(x, m);
 		}
 		m.set(y, value);
 		return this;
 	}
 
 	clear(): void {
-		this._map.clear();
+		this._rootMap.clear();
 	}
 
 	delete([x, y]: [K, K]): boolean {
-		const m = this._map.get(x);
+		const m = this._rootMap.get(x);
 		if (!m) {
 			return false;
 		}
 		const result = m.delete(y);
 		if (m.size === 0) {
-			this._map.delete(x);
+			this._rootMap.delete(x);
 		}
 		return result;
 	}
@@ -118,7 +122,14 @@ export class TupleMap<K, V>
 }
 
 export class TupleSet<K> implements SetLike<[K, K]> {
-	private _map: TupleMap<K, [K, K]> = new TupleMap();
+	constructor(
+		iterable: Iterable<[K, K]> = [],
+		private _map: TupleMap<K, [K, K]> = new TupleMap()
+	) {
+		for (const value of iterable) {
+			this.add(value);
+		}
+	}
 
 	has(key: [K, K]): boolean {
 		return this._map.has(key);
@@ -129,7 +140,7 @@ export class TupleSet<K> implements SetLike<[K, K]> {
 		return this;
 	}
 
-	*entries(): IterableIterator<[[K, K], [K, K]]> {
+	entries(): IterableIterator<[[K, K], [K, K]]> {
 		return this._map.entries();
 	}
 
@@ -137,11 +148,11 @@ export class TupleSet<K> implements SetLike<[K, K]> {
 		this._map.forEach((v) => cb(v, v, this));
 	}
 
-	*keys(): IterableIterator<[K, K]> {
+	keys(): IterableIterator<[K, K]> {
 		return this._map.keys();
 	}
 
-	*values(): IterableIterator<[K, K]> {
+	values(): IterableIterator<[K, K]> {
 		return this._map.values();
 	}
 

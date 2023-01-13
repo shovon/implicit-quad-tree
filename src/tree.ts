@@ -1,4 +1,4 @@
-import { TupleMap, TupleSet } from "./map";
+import { MapLike, TupleMap, TupleSet } from "./map";
 
 const { round, abs, sign, ceil } = Math;
 
@@ -140,21 +140,40 @@ function first<V>(iterable: Iterable<V>): Optional<V> {
 	return null;
 }
 
+function initializeTupleMap() {
+	return new TupleMap(
+		[],
+		new TupleMap<number, MapLike<Point2D, TupleSet<Point2D>>>(),
+		() => new TupleMap()
+	);
+}
+
+function initializeTupleSet() {
+	return new TupleSet<Point2D>(
+		[],
+		new TupleMap<Point2D, [Point2D, Point2D]>(
+			[],
+			new TupleMap<number, MapLike<Point2D, [Point2D, Point2D]>>(),
+			() => new TupleMap()
+		)
+	);
+}
+
+// Fuck it. Just use a string map
+
 /**
  * The adjacency list to compute all linked lists by traversing all connected
  * nodes in the (possibly disjoint) graph
  */
 export class LinkAdjacencyList {
-	private _map: TupleMap<Point2D, TupleSet<Point2D>> = new TupleMap(
-		new TupleMap()
-	);
+	private _map: TupleMap<Point2D, TupleSet<Point2D>> = initializeTupleMap();
 
 	// Link two nodes
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
 		// Get the adjacency associated with `from`
 		let list = this._map.get(from);
 		if (!list) {
-			list = new TupleSet();
+			list = initializeTupleSet();
 			this._map.set(from, list);
 		}
 		// Append the destination
@@ -163,7 +182,7 @@ export class LinkAdjacencyList {
 		// Get the adjacency associated with `to`
 		list = this._map.get(to);
 		if (!list) {
-			list = new TupleSet();
+			list = initializeTupleSet();
 			this._map.set(to, list);
 		}
 		// Append the source
@@ -178,7 +197,11 @@ export class LinkAdjacencyList {
 	}
 
 	private *getGraphs(): IterableIterator<LinkListNode<[Point2D, Point2D]>> {
-		const copied = new TupleMap(this._map);
+		const copied = new TupleMap(
+			this._map,
+			new TupleMap<number, MapLike<Point2D, TupleSet<Point2D>>>(),
+			() => new TupleMap()
+		);
 
 		const roots: [Point2D, Point2D][] = [];
 
@@ -186,7 +209,9 @@ export class LinkAdjacencyList {
 			const optional = first(copied);
 			if (optional) {
 				const [side] = optional.value;
-				roots.push(LinkAdjacencyList.findRoot(side, copied, new TupleSet()));
+				roots.push(
+					LinkAdjacencyList.findRoot(side, copied, initializeTupleSet())
+				);
 			}
 		}
 
@@ -194,7 +219,7 @@ export class LinkAdjacencyList {
 			const ll = LinkAdjacencyList.generateLinkedList(
 				root,
 				this._map,
-				new TupleSet()
+				initializeTupleSet()
 			);
 			if (ll) {
 				yield ll;
@@ -208,11 +233,15 @@ export class LinkAdjacencyList {
 		visited: TupleSet<Point2D>
 	): LinkListNode<[Point2D, Point2D]> | null {
 		const node = map.get(side);
-		map.delete(side);
 
-		const [next] = [...(node || [])].filter(
-			(neighbor) => !visited.has(neighbor)
-		);
+		if (!node) {
+			return null;
+		}
+
+		const nexts = [...node].filter((neighbor) => !visited.has(neighbor));
+		// console.log(nexts, nexts.length);
+
+		const [next] = nexts;
 
 		if (!next) {
 			return null;
@@ -220,7 +249,7 @@ export class LinkAdjacencyList {
 
 		visited.add(side);
 
-		return new LinkListNode(side, this.generateLinkedList(side, map, visited));
+		return new LinkListNode(next, this.generateLinkedList(side, map, visited));
 	}
 
 	private static findRoot(
@@ -228,11 +257,11 @@ export class LinkAdjacencyList {
 		map: TupleMap<Point2D, TupleSet<Point2D>>,
 		visited: TupleSet<Point2D>
 	): [Point2D, Point2D] {
-		map.delete(side);
-
 		const [next] = [...(map.get(side) || [])].filter(
 			(neighbor) => !visited.has(neighbor)
 		);
+
+		map.delete(side);
 
 		if (!next) {
 			return side;

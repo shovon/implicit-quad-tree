@@ -8,7 +8,50 @@ import {
 	QuadTreeNode,
 } from "./tree";
 
-import { TupleMap } from "./map";
+import { MapLike, TupleMap, TupleSet } from "./map";
+
+const m = new TupleMap<Point2D, [Point2D, Point2D]>(
+	[],
+	new TupleMap<number, MapLike<Point2D, [Point2D, Point2D]>>(),
+	() => new TupleMap()
+);
+m.set(
+	[
+		[1, 2],
+		[3, 4],
+	],
+	[
+		[1, 2],
+		[3, 4],
+	]
+);
+
+console.log(
+	m.has([
+		[1, 2],
+		[3, 4],
+	])
+);
+
+const t = new TupleSet<Point2D>(
+	[],
+	new TupleMap<Point2D, [Point2D, Point2D]>(
+		[],
+		new TupleMap<number, MapLike<Point2D, [Point2D, Point2D]>>(),
+		() => new TupleMap()
+	)
+);
+t.add([
+	[1, 2],
+	[3, 4],
+]);
+
+console.log(
+	t.has([
+		[1, 2],
+		[3, 4],
+	])
+);
 
 // General idea
 //
@@ -19,8 +62,6 @@ import { TupleMap } from "./map";
 // - continue subdivision until we reach a maximum depth
 // - all quadrants will have either exactly 2 or 4 sign reversals
 // - run through all signs at edge of each quadrant and connect those "boxes"
-
-const tm = new TupleMap<number, string>();
 
 // Inspiration from this article
 // https://www.mattkeeter.com/projects/contours/
@@ -352,27 +393,28 @@ if (context) {
 	computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
 
 	for (const graph of list.graphs) {
-		let isFirst = true;
-		context.strokeStyle = "red";
-		for (const point of graph) {
-			const [x, y] = pointToAbsolute(
-				{
-					from: [-3, 3],
-					delta: [6, 6],
-				},
-				point,
-				getContextDimensions(context)
-			);
+		console.log(graph);
+		// let isFirst = true;
+		// context.strokeStyle = "red";
+		// for (const point of graph) {
+		// 	const [x, y] = pointToAbsolute(
+		// 		{
+		// 			from: [-3, 3],
+		// 			delta: [6, 6],
+		// 		},
+		// 		point,
+		// 		getContextDimensions(context)
+		// 	);
 
-			if (isFirst) {
-				isFirst = false;
-				context.moveTo(x, y);
-			} else {
-				context.lineTo(x, y);
-			}
-		}
+		// 	if (isFirst) {
+		// 		isFirst = false;
+		// 		context.moveTo(x, y);
+		// 	} else {
+		// 		context.lineTo(x, y);
+		// 	}
+		// }
 
-		context.stroke();
+		// context.stroke();
 	}
 
 	console.timeEnd();
