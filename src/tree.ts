@@ -1,4 +1,5 @@
 import { MapLike, TupleMap, TupleSet } from "./map";
+import { Map4D, Set4D } from "./side-map";
 
 const { round, abs, sign, ceil } = Math;
 
@@ -166,7 +167,7 @@ function initializeTupleSet() {
  * nodes in the (possibly disjoint) graph
  */
 export class LinkAdjacencyList {
-	private _map: TupleMap<Point2D, TupleSet<Point2D>> = initializeTupleMap();
+	private _map: Map4D<number, Set4D<number>> = new Map();
 
 	// Link two nodes
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {

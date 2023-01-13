@@ -7,15 +7,13 @@ import {
 	LinkAdjacencyList,
 	QuadTreeNode,
 } from "./tree";
+import { setSide, hasSide, SideMap, SideSet } from "./side-map";
 
 import { MapLike, TupleMap, TupleSet } from "./map";
 
-const m = new TupleMap<Point2D, [Point2D, Point2D]>(
-	[],
-	new TupleMap<number, MapLike<Point2D, [Point2D, Point2D]>>(),
-	() => new TupleMap()
-);
-m.set(
+const m: SideMap = new Map();
+setSide(
+	m,
 	[
 		[1, 2],
 		[3, 4],
@@ -27,7 +25,7 @@ m.set(
 );
 
 console.log(
-	m.has([
+	hasSide(m, [
 		[1, 2],
 		[3, 4],
 	])
