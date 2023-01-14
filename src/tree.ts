@@ -1,5 +1,4 @@
-import { MapLike, TupleMap, TupleSet } from "./map";
-import { Map4D, Set4D } from "./side-map";
+import { SideMap, SideSet } from "./side-map";
 
 const { round, abs, sign, ceil } = Math;
 
@@ -102,8 +101,6 @@ export function createTree(
 	return null;
 }
 
-type Value = any;
-
 // We want to find true neigbouring blocks
 
 interface ILinkListNode<V> {
@@ -141,40 +138,27 @@ function first<V>(iterable: Iterable<V>): Optional<V> {
 	return null;
 }
 
-function initializeTupleMap() {
-	return new TupleMap(
-		[],
-		new TupleMap<number, MapLike<Point2D, TupleSet<Point2D>>>(),
-		() => new TupleMap()
-	);
-}
+const pointEquals = ([x1, y1]: Point2D, [x2, y2]: Point2D) =>
+	x1 === x2 && y1 === y2;
 
-function initializeTupleSet() {
-	return new TupleSet<Point2D>(
-		[],
-		new TupleMap<Point2D, [Point2D, Point2D]>(
-			[],
-			new TupleMap<number, MapLike<Point2D, [Point2D, Point2D]>>(),
-			() => new TupleMap()
-		)
-	);
-}
-
-// Fuck it. Just use a string map
+const sideEquals = (
+	[s1p1, s1p2]: [Point2D, Point2D],
+	[s2p1, s2p2]: [Point2D, Point2D]
+): boolean => pointEquals(s1p1, s2p1) && pointEquals(s1p2, s2p2);
 
 /**
  * The adjacency list to compute all linked lists by traversing all connected
  * nodes in the (possibly disjoint) graph
  */
 export class LinkAdjacencyList {
-	private _map: Map4D<number, Set4D<number>> = new Map();
+	private _map: SideMap<SideSet> = new SideMap();
 
 	// Link two nodes
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
 		// Get the adjacency associated with `from`
 		let list = this._map.get(from);
 		if (!list) {
-			list = initializeTupleSet();
+			list = new SideSet();
 			this._map.set(from, list);
 		}
 		// Append the destination
@@ -183,7 +167,7 @@ export class LinkAdjacencyList {
 		// Get the adjacency associated with `to`
 		list = this._map.get(to);
 		if (!list) {
-			list = initializeTupleSet();
+			list = new SideSet();
 			this._map.set(to, list);
 		}
 		// Append the source
@@ -197,12 +181,8 @@ export class LinkAdjacencyList {
 		return this.getGraphs();
 	}
 
-	private *getGraphs(): IterableIterator<LinkListNode<[Point2D, Point2D]>> {
-		const copied = new TupleMap(
-			this._map,
-			new TupleMap<number, MapLike<Point2D, TupleSet<Point2D>>>(),
-			() => new TupleMap()
-		);
+	private *getGraphs(): Iterable<Iterable<[Point2D, Point2D]>> {
+		const copied = new SideMap(this._map);
 
 		const roots: [Point2D, Point2D][] = [];
 
@@ -210,28 +190,76 @@ export class LinkAdjacencyList {
 			const optional = first(copied);
 			if (optional) {
 				const [side] = optional.value;
-				roots.push(
-					LinkAdjacencyList.findRoot(side, copied, initializeTupleSet())
-				);
+				const root = LinkAdjacencyList.findRoot(side, copied);
+				if (root) {
+					roots.push(root);
+				}
 			}
 		}
 
 		for (const root of roots) {
-			const ll = LinkAdjacencyList.generateLinkedList(
-				root,
-				this._map,
-				initializeTupleSet()
-			);
-			if (ll) {
-				yield ll;
+			// const sides: [Point2D, Point2D][] = [root];
+
+			// const visited = new SideSet();
+
+			// let previous = root;
+
+			// while (!visited.has(previous)) {
+			// 	visited.add(previous);
+			// 	const neighbors = this._map.get(root);
+
+			// 	if (!neighbors) {
+			// 		// Uhh... Not sure what to do here
+			// 		break;
+			// 	}
+
+			// 	for (const neighbor of neighbors) {
+			// 		if (!sideEquals(neighbor, previous) && !visited.has(neighbor)) {
+			// 			sides.push(neighbor);
+			// 			previous = neighbor;
+			// 			break;
+			// 		}
+			// 	}
+			// }
+
+			// yield sides;
+
+			yield this.traversePath(root, null, new SideSet());
+
+			// const ll = LinkAdjacencyList.generateLinkedList(
+			// 	root,
+			// 	this._map,
+			// 	new SideSet()
+			// );
+			// if (ll) {
+			// 	yield ll;
+			// }
+		}
+	}
+
+	private *traversePath(
+		root: [Point2D, Point2D],
+		previous: [Point2D, Point2D] | null,
+		visited: SideSet
+	): IterableIterator<[Point2D, Point2D]> {
+		yield root;
+		visited.add(root);
+		const neighbors = this._map.get(root);
+		if (!neighbors) {
+			return;
+		}
+
+		for (const neighbor of neighbors) {
+			if (previous && !sideEquals(previous, root)) {
+				yield* this.traversePath(neighbor, root, visited);
 			}
 		}
 	}
 
 	private static generateLinkedList(
 		side: [Point2D, Point2D],
-		map: TupleMap<Point2D, TupleSet<Point2D>>,
-		visited: TupleSet<Point2D>
+		map: SideMap<SideSet>,
+		visited: SideSet
 	): LinkListNode<[Point2D, Point2D]> | null {
 		const node = map.get(side);
 
@@ -239,49 +267,76 @@ export class LinkAdjacencyList {
 			return null;
 		}
 
-		const nexts = [...node].filter((neighbor) => !visited.has(neighbor));
-		// console.log(nexts, nexts.length);
-
-		const [next] = nexts;
-
-		if (!next) {
-			return null;
-		}
-
 		visited.add(side);
 
-		return new LinkListNode(next, this.generateLinkedList(side, map, visited));
+		let lastNeighbor: [Point2D, Point2D] | null = null;
+
+		for (const neighbor of node) {
+			lastNeighbor = neighbor;
+			if (!visited.has(neighbor)) {
+				return new LinkListNode(
+					neighbor,
+					LinkAdjacencyList.generateLinkedList(neighbor, map, visited)
+				);
+			}
+		}
+
+		if (lastNeighbor) {
+			return new LinkListNode(lastNeighbor, null);
+		}
+
+		return null;
 	}
 
 	private static findRoot(
 		side: [Point2D, Point2D],
-		map: TupleMap<Point2D, TupleSet<Point2D>>,
-		visited: TupleSet<Point2D>
-	): [Point2D, Point2D] {
-		const [next] = [...(map.get(side) || [])].filter(
-			(neighbor) => !visited.has(neighbor)
-		);
+		map: SideMap<SideSet>
+	): [Point2D, Point2D] | null {
+		const neighbors = map.get(side);
 
 		map.delete(side);
 
-		if (!next) {
+		if (!neighbors || neighbors.size <= 0) {
 			return side;
 		}
 
-		visited.add(next);
+		// Iterate through all neighbors,
+		for (const neighbor of [...neighbors]) {
+			if (map.has(neighbor)) {
+				return LinkAdjacencyList.findRoot(neighbor, map);
+			}
+		}
 
-		return LinkAdjacencyList.findRoot(side, map, visited);
+		return side;
+	}
+
+	toForceGraph(): {
+		nodes: { id: string }[];
+		links: {
+			source: string;
+			target: string;
+		}[];
+	} {
+		return {
+			nodes: [...this._map].map(([key]) => ({ id: JSON.stringify(key) })),
+			links: [...this._map].flatMap(([from, links]) =>
+				[...links].map((to) => ({
+					source: JSON.stringify(from),
+					target: JSON.stringify(to),
+				}))
+			),
+		};
 	}
 }
 
-function intercept(
-	[x1, y1]: [number, number],
-	[x2, y2]: [number, number]
-): number {
-	const m = (y2 - y1) / (x2 - x1);
-	const b = y1 - m * x1;
-	return -b / m;
-}
+// function intercept(
+// 	[x1, y1]: [number, number],
+// 	[x2, y2]: [number, number]
+// ): number {
+// 	const m = (y2 - y1) / (x2 - x1);
+// 	const b = y1 - m * x1;
+// 	return -b / m;
+// }
 
 export function computeLinkedLists(
 	list: LinkAdjacencyList,

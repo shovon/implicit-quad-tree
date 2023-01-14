@@ -7,49 +7,6 @@ import {
 	LinkAdjacencyList,
 	QuadTreeNode,
 } from "./tree";
-import { setSide, hasSide, SideMap, SideSet } from "./side-map";
-
-import { MapLike, TupleMap, TupleSet } from "./map";
-
-const m: SideMap = new Map();
-setSide(
-	m,
-	[
-		[1, 2],
-		[3, 4],
-	],
-	[
-		[1, 2],
-		[3, 4],
-	]
-);
-
-console.log(
-	hasSide(m, [
-		[1, 2],
-		[3, 4],
-	])
-);
-
-const t = new TupleSet<Point2D>(
-	[],
-	new TupleMap<Point2D, [Point2D, Point2D]>(
-		[],
-		new TupleMap<number, MapLike<Point2D, [Point2D, Point2D]>>(),
-		() => new TupleMap()
-	)
-);
-t.add([
-	[1, 2],
-	[3, 4],
-]);
-
-console.log(
-	t.has([
-		[1, 2],
-		[3, 4],
-	])
-);
 
 // General idea
 //
@@ -348,9 +305,10 @@ const context = canvas.getContext("2d");
 
 console.time();
 if (context) {
-	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - x + 1;
+	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 4 * x + 1;
+	// const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
 
-	const node = createTree(zero, 0, [-3, 3], [6, 6], 1, 5);
+	const node = createTree(zero, 0, [-3, 3], [6, 6], 3, 3);
 
 	const boxes = getBoxes(
 		{
@@ -391,28 +349,28 @@ if (context) {
 	computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
 
 	for (const graph of list.graphs) {
-		console.log(graph);
-		// let isFirst = true;
-		// context.strokeStyle = "red";
-		// for (const point of graph) {
-		// 	const [x, y] = pointToAbsolute(
-		// 		{
-		// 			from: [-3, 3],
-		// 			delta: [6, 6],
-		// 		},
-		// 		point,
-		// 		getContextDimensions(context)
-		// 	);
+		let isFirst = true;
 
-		// 	if (isFirst) {
-		// 		isFirst = false;
-		// 		context.moveTo(x, y);
-		// 	} else {
-		// 		context.lineTo(x, y);
-		// 	}
-		// }
+		context.strokeStyle = "red";
+		for (const [point1, point2] of graph) {
+			const point = pointToAbsolute(
+				{
+					from: [-3, 3],
+					delta: [6, 6],
+				},
+				[(point1[0] + point2[0]) / 2, (point1[1] + point2[1]) / 2],
+				getContextDimensions(context)
+			);
 
-		// context.stroke();
+			if (isFirst) {
+				isFirst = false;
+				context.moveTo(point[0], point[1]);
+			} else {
+				context.lineTo(point[0], point[1]);
+			}
+		}
+
+		context.stroke();
 	}
 
 	console.timeEnd();
