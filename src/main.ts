@@ -246,7 +246,7 @@ function marchingSquaresLinearInterpolated(
 							// Get the right point.
 							const point = [
 								x + dx,
-								intercept([y, zero(x + dx, y)], [y - dx, zero(x + dx, y - dy)]),
+								intercept([y, zero(x + dx, y)], [y - dy, zero(x + dx, y - dy)]),
 							] satisfies Point2D;
 							points.push(point);
 						}
@@ -303,10 +303,20 @@ document.body.appendChild(canvas);
 
 const context = canvas.getContext("2d");
 
+function mid(
+	zero: (x: number, y: number) => number,
+	[[x1, y1], [x2, y2]]: [Point2D, Point2D]
+): Point2D {
+	return [
+		x1 === x2 ? x1 : intercept([x1, zero(x1, y1)], [x2, zero(x2, y2)]),
+		y1 === y2 ? y1 : intercept([y1, zero(x1, y1)], [y2, zero(x2, y2)]),
+	];
+}
+
 console.time();
 if (context) {
-	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 4 * x + 1;
-	// const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
+	// const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 1 * x + 3;
+	const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
 
 	const node = createTree(zero, 0, [-3, 3], [6, 6], 3, 3);
 
@@ -348,8 +358,10 @@ if (context) {
 
 	computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
 
-	for (const graph of list.graphs) {
+	for (const g of list.graphs) {
 		let isFirst = true;
+
+		const graph = [...g];
 
 		context.strokeStyle = "red";
 		for (const [point1, point2] of graph) {
@@ -358,7 +370,7 @@ if (context) {
 					from: [-3, 3],
 					delta: [6, 6],
 				},
-				[(point1[0] + point2[0]) / 2, (point1[1] + point2[1]) / 2],
+				mid(zero, [point1, point2]),
 				getContextDimensions(context)
 			);
 

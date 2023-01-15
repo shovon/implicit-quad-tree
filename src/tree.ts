@@ -190,7 +190,7 @@ export class LinkAdjacencyList {
 			const optional = first(copied);
 			if (optional) {
 				const [side] = optional.value;
-				const root = LinkAdjacencyList.findRoot(side, copied);
+				const root = LinkAdjacencyList.findRoot(side, copied, new SideSet());
 				if (root) {
 					roots.push(root);
 				}
@@ -198,42 +198,7 @@ export class LinkAdjacencyList {
 		}
 
 		for (const root of roots) {
-			// const sides: [Point2D, Point2D][] = [root];
-
-			// const visited = new SideSet();
-
-			// let previous = root;
-
-			// while (!visited.has(previous)) {
-			// 	visited.add(previous);
-			// 	const neighbors = this._map.get(root);
-
-			// 	if (!neighbors) {
-			// 		// Uhh... Not sure what to do here
-			// 		break;
-			// 	}
-
-			// 	for (const neighbor of neighbors) {
-			// 		if (!sideEquals(neighbor, previous) && !visited.has(neighbor)) {
-			// 			sides.push(neighbor);
-			// 			previous = neighbor;
-			// 			break;
-			// 		}
-			// 	}
-			// }
-
-			// yield sides;
-
 			yield this.traversePath(root, null, new SideSet());
-
-			// const ll = LinkAdjacencyList.generateLinkedList(
-			// 	root,
-			// 	this._map,
-			// 	new SideSet()
-			// );
-			// if (ll) {
-			// 	yield ll;
-			// }
 		}
 	}
 
@@ -249,48 +214,26 @@ export class LinkAdjacencyList {
 			return;
 		}
 
-		for (const neighbor of neighbors) {
-			if (previous && !sideEquals(previous, root)) {
-				yield* this.traversePath(neighbor, root, visited);
-			}
-		}
-	}
-
-	private static generateLinkedList(
-		side: [Point2D, Point2D],
-		map: SideMap<SideSet>,
-		visited: SideSet
-	): LinkListNode<[Point2D, Point2D]> | null {
-		const node = map.get(side);
-
-		if (!node) {
-			return null;
-		}
-
-		visited.add(side);
-
 		let lastNeighbor: [Point2D, Point2D] | null = null;
 
-		for (const neighbor of node) {
-			lastNeighbor = neighbor;
+		for (const neighbor of neighbors) {
 			if (!visited.has(neighbor)) {
-				return new LinkListNode(
-					neighbor,
-					LinkAdjacencyList.generateLinkedList(neighbor, map, visited)
-				);
+				yield* this.traversePath(neighbor, root, visited);
+				break;
+			} else if (previous && !sideEquals(neighbor, previous)) {
+				lastNeighbor = neighbor;
 			}
 		}
 
 		if (lastNeighbor) {
-			return new LinkListNode(lastNeighbor, null);
+			yield lastNeighbor;
 		}
-
-		return null;
 	}
 
 	private static findRoot(
 		side: [Point2D, Point2D],
-		map: SideMap<SideSet>
+		map: SideMap<SideSet>,
+		visited: SideSet
 	): [Point2D, Point2D] | null {
 		const neighbors = map.get(side);
 
@@ -300,43 +243,25 @@ export class LinkAdjacencyList {
 			return side;
 		}
 
+		const nodes: [Point2D, Point2D][] = [];
+
 		// Iterate through all neighbors,
 		for (const neighbor of [...neighbors]) {
-			if (map.has(neighbor)) {
-				return LinkAdjacencyList.findRoot(neighbor, map);
+			if (map.has(neighbor) && !visited.has(neighbor)) {
+				const result = LinkAdjacencyList.findRoot(neighbor, map, visited);
+				if (result) {
+					nodes.push(result);
+				}
 			}
+		}
+
+		if (nodes.length) {
+			return nodes[0];
 		}
 
 		return side;
 	}
-
-	toForceGraph(): {
-		nodes: { id: string }[];
-		links: {
-			source: string;
-			target: string;
-		}[];
-	} {
-		return {
-			nodes: [...this._map].map(([key]) => ({ id: JSON.stringify(key) })),
-			links: [...this._map].flatMap(([from, links]) =>
-				[...links].map((to) => ({
-					source: JSON.stringify(from),
-					target: JSON.stringify(to),
-				}))
-			),
-		};
-	}
 }
-
-// function intercept(
-// 	[x1, y1]: [number, number],
-// 	[x2, y2]: [number, number]
-// ): number {
-// 	const m = (y2 - y1) / (x2 - x1);
-// 	const b = y1 - m * x1;
-// 	return -b / m;
-// }
 
 export function computeLinkedLists(
 	list: LinkAdjacencyList,
