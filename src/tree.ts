@@ -1,22 +1,20 @@
-import { LinkAdjacencyList } from "./link-adjacency-list";
+import { LinkAdjacencyListSide } from "./link-adjacency-list-2d";
 
 const { round, abs, sign, ceil } = Math;
 
 type Point2D = [number, number];
 
 type Upper = 1;
-const upper: Upper = 1;
-
 type Lower = 2;
-const lower: Lower = 2;
-
 type Left = 3;
-const left: Left = 3;
-
 type Right = 4;
-const right: Right = 4;
 
 type Side = Upper | Lower | Left | Right;
+
+const upper: Upper = 1;
+const lower: Lower = 2;
+const left: Left = 3;
+const right: Right = 4;
 
 const lut: [Side, Side][][] = [
 	[],
@@ -64,7 +62,7 @@ function hasContour(
 }
 
 export function computeLinkedLists(
-	list: LinkAdjacencyList,
+	list: LinkAdjacencyListSide,
 	fn: (x: number, y: number) => number,
 	[x, y]: readonly [number, number],
 	[dx, dy]: readonly [number, number],
@@ -123,47 +121,35 @@ export function computeLinkedLists(
 	const lines = lut[value];
 
 	for (const line of lines) {
-		const sides: [Point2D, Point2D][] = [];
-
-		for (const direction of line) {
+		const calculateSide = (direction: Side): [Point2D, Point2D] => {
 			switch (direction) {
 				case upper:
-					sides.push([
+					return [
 						[x, y],
 						[x + dx, y],
-					]);
-					break;
+					];
 				case right:
-					sides.push([
+					return [
 						[x + dx, y],
 						[x + dx, y - dy],
-					]);
-					break;
+					];
 				case lower:
-					sides.push([
+					return [
 						[x, y - dy],
 						[x + dx, y - dy],
-					]);
-					break;
+					];
 				case left:
-					sides.push([
+					return [
 						[x, y],
 						[x, y - dy],
-					]);
-					break;
+					];
 			}
-		}
+		};
 
-		const [from, to] = sides;
-		if (!from) {
-			console.error("Expected exactly two points, but got none");
-			continue;
-		}
+		const [first, second] = line;
 
-		if (!to) {
-			console.error("Expected exactly two points, but got one");
-			continue;
-		}
+		const from = calculateSide(first);
+		const to = calculateSide(second);
 
 		list.linkNode(from, to);
 	}

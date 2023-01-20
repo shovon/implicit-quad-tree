@@ -1,4 +1,4 @@
-import { PointMap, PointSet } from "./point-map";
+import { SideMap, SideSet } from "./side-map";
 
 type Point2D = [number, number];
 
@@ -14,15 +14,20 @@ function first<V>(iterable: Iterable<V>): Optional<V> {
 const pointEquals = ([x1, y1]: Point2D, [x2, y2]: Point2D) =>
 	x1 === x2 && y1 === y2;
 
+const sideEquals = (
+	[s1p1, s1p2]: [Point2D, Point2D],
+	[s2p1, s2p2]: [Point2D, Point2D]
+): boolean => pointEquals(s1p1, s2p1) && pointEquals(s1p2, s2p2);
+
 export class LinkAdjacencyListSide {
-	private _map: PointMap<PointSet> = new PointMap();
+	private _map: SideMap<SideSet> = new SideMap();
 
 	// Link two nodes
-	linkNode(from: Point2D, to: Point2D) {
+	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
 		// Get the adjacency associated with `from`
 		let list = this._map.get(from);
 		if (!list) {
-			list = new PointSet();
+			list = new SideSet();
 			this._map.set(from, list);
 		}
 		// Append the destination
@@ -31,7 +36,7 @@ export class LinkAdjacencyListSide {
 		// Get the adjacency associated with `to`
 		list = this._map.get(to);
 		if (!list) {
-			list = new PointSet();
+			list = new SideSet();
 			this._map.set(to, list);
 		}
 		// Append the source
@@ -45,10 +50,10 @@ export class LinkAdjacencyListSide {
 		return this.getGraphs();
 	}
 
-	private *getGraphs(): Iterable<Iterable<Point2D>> {
-		const copied = new PointMap(this._map);
+	private *getGraphs(): Iterable<Iterable<[Point2D, Point2D]>> {
+		const copied = new SideMap(this._map);
 
-		const roots: Point2D[] = [];
+		const roots: [Point2D, Point2D][] = [];
 
 		while (copied.size > 0) {
 			const optional = first(copied);
@@ -57,7 +62,7 @@ export class LinkAdjacencyListSide {
 				const root = LinkAdjacencyListSide.findRoot(
 					side,
 					copied,
-					new PointSet()
+					new SideSet()
 				);
 				if (root) {
 					roots.push(root);
@@ -66,15 +71,15 @@ export class LinkAdjacencyListSide {
 		}
 
 		for (const root of roots) {
-			yield this.traversePath(root, null, new PointSet());
+			yield this.traversePath(root, null, new SideSet());
 		}
 	}
 
 	private *traversePath(
-		root: Point2D,
-		previous: Point2D | null,
-		visited: PointSet
-	): IterableIterator<Point2D> {
+		root: [Point2D, Point2D],
+		previous: [Point2D, Point2D] | null,
+		visited: SideSet
+	): IterableIterator<[Point2D, Point2D]> {
 		yield root;
 		visited.add(root);
 		const neighbors = this._map.get(root);
@@ -82,13 +87,13 @@ export class LinkAdjacencyListSide {
 			return;
 		}
 
-		let lastNeighbor: Point2D | null = null;
+		let lastNeighbor: [Point2D, Point2D] | null = null;
 
 		for (const neighbor of neighbors) {
 			if (!visited.has(neighbor)) {
 				yield* this.traversePath(neighbor, root, visited);
 				break;
-			} else if (previous && !pointEquals(neighbor, previous)) {
+			} else if (previous && !sideEquals(neighbor, previous)) {
 				lastNeighbor = neighbor;
 			}
 		}
@@ -99,10 +104,10 @@ export class LinkAdjacencyListSide {
 	}
 
 	private static findRoot(
-		side: Point2D,
-		map: PointMap<PointSet>,
-		visited: PointSet
-	): Point2D | null {
+		side: [Point2D, Point2D],
+		map: SideMap<SideSet>,
+		visited: SideSet
+	): [Point2D, Point2D] | null {
 		const neighbors = map.get(side);
 
 		map.delete(side);
@@ -111,7 +116,7 @@ export class LinkAdjacencyListSide {
 			return side;
 		}
 
-		const nodes: Point2D[] = [];
+		const nodes: [Point2D, Point2D][] = [];
 
 		for (const neighbor of [...neighbors]) {
 			if (map.has(neighbor) && !visited.has(neighbor)) {

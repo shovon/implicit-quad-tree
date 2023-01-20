@@ -8,7 +8,7 @@
 // https://martindevans.me/game-development/2016/12/27/Dual-Contouring-In-2D/
 
 import { computeLinkedLists } from "./tree";
-import { LinkAdjacencyList } from "./link-adjacency-list";
+import { LinkAdjacencyListSide } from "./link-adjacency-list-2d";
 
 // General idea
 //
@@ -23,34 +23,32 @@ import { LinkAdjacencyList } from "./link-adjacency-list";
 // Inspiration from this article
 // https://www.mattkeeter.com/projects/contours/
 
-type Point2D = [number, number];
+type Point2D = readonly [number, number];
 
 // This is a helper function to convert coordinates to screen space. Perhaps
 // the use of a projection matrix will be much better
-function pointToAbsolute(
+function pixelSpace(
 	{
-		from,
+		start,
 		delta,
 	}: {
-		readonly from: readonly [number, number];
-		readonly delta: readonly [number, number];
+		readonly start: Point2D;
+		readonly delta: Point2D;
 	},
-	[x, y]: readonly [number, number],
-	[width, height]: readonly [number, number]
-): readonly [number, number] {
+	[x, y]: Point2D,
+	[width, height]: Point2D
+): Point2D {
 	console.assert(delta[0] > 0);
 	console.assert(delta[1] > 0);
 
 	const xFactor = width / delta[0],
 		yFactor = height / delta[1];
 
-	return [(x - from[0]) * xFactor, -(y - from[1]) * yFactor];
+	return [(x - start[0]) * xFactor, -(y - start[1]) * yFactor];
 }
 
 // Not generalizable across outputs. This thing is going away
-function getContextDimensions(
-	context: CanvasRenderingContext2D
-): [number, number] {
+function getContextDimensions(context: CanvasRenderingContext2D): Point2D {
 	const { width, height } = context.canvas.getBoundingClientRect();
 	return [width, height];
 }
@@ -62,14 +60,6 @@ function intercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
 	return -b / m;
 }
 
-const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
-canvas.width = 800;
-canvas.height = 600;
-
-document.body.appendChild(canvas);
-
-const context = canvas.getContext("2d");
-
 function mid(
 	zero: (x: number, y: number) => number,
 	[[x1, y1], [x2, y2]]: [Point2D, Point2D]
@@ -80,13 +70,21 @@ function mid(
 	];
 }
 
+const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
+canvas.width = 800;
+canvas.height = 600;
+
+document.body.appendChild(canvas);
+
+const context = canvas.getContext("2d");
+
 if (context) {
 	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 1 * x;
 	// const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
 
 	console.time();
 
-	const list = new LinkAdjacencyList();
+	const list = new LinkAdjacencyListSide();
 
 	// computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
 	computeLinkedLists(list, zero, [-3, 3], [6, 6], 0, 5, 3);
@@ -100,9 +98,9 @@ if (context) {
 
 		context.strokeStyle = "red";
 		for (const [point1, point2] of graph) {
-			const point = pointToAbsolute(
+			const point = pixelSpace(
 				{
-					from: [-3, 3],
+					start: [-3, 3],
 					delta: [6, 6],
 				},
 				mid(zero, [point1, point2]),
