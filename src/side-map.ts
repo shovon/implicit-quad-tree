@@ -7,11 +7,7 @@ import {
 	Map4D,
 	set4D,
 } from "./map4d";
-import { Point2D } from "./tree";
-
-// export type SideSet = Map4D<number, [Point2D, Point2D]>;
-
-// export type SideMap<V> = Map4D<number, V>;
+import { Point2D } from "./old-tree";
 
 export class SideMap<V> {
 	private _map: Map4D<number, V> = new Map();
