@@ -1,6 +1,12 @@
 // Implementation of this paper
 // https://academic.oup.com/comjnl/article/33/5/402/480353
 
+// Some ideas taken from this article
+// https://www.mattkeeter.com/projects/contours/
+
+// More readings
+// https://martindevans.me/game-development/2016/12/27/Dual-Contouring-In-2D/
+
 import {
 	computeLinkedLists,
 	createTree,
@@ -214,8 +220,6 @@ function marchingSquaresLinearInterpolated(
 			deltaHalf
 		);
 	} else {
-		console.log();
-
 		const tl = (Math.ceil(Math.sign(zero(x, y)) * 0.9) | 0) << 3;
 		const tr = (Math.ceil(Math.sign(zero(x + dx, y)) * 0.9) | 0) << 2;
 		const br = (Math.ceil(Math.sign(zero(x + dx, y - dy)) * 0.9) | 0) << 1;
@@ -313,34 +317,35 @@ function mid(
 	];
 }
 
-console.time();
 if (context) {
-	// const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 1 * x + 3;
-	const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
+	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 1 * x + 1;
+	// const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
 
-	const node = createTree(zero, 0, [-3, 3], [6, 6], 3, 3);
+	console.time();
 
-	const boxes = getBoxes(
-		{
-			from: [-3, 3],
-			delta: [6, 6],
-		},
-		node,
-		[-3, 3],
-		[6, 6]
-	);
+	const node = createTree(zero, 0, [-3, 3], [6, 6], 5, 3);
 
-	for (const box of boxes) {
-		drawBox(
-			context,
-			{
-				from: [-3, 3],
-				delta: [6, 6],
-			},
-			[box.x, box.y],
-			[box.dx, box.dy]
-		);
-	}
+	// const boxes = getBoxes(
+	// 	{
+	// 		from: [-3, 3],
+	// 		delta: [6, 6],
+	// 	},
+	// 	node,
+	// 	[-3, 3],
+	// 	[6, 6]
+	// );
+
+	// for (const box of boxes) {
+	// 	drawBox(
+	// 		context,
+	// 		{
+	// 			from: [-3, 3],
+	// 			delta: [6, 6],
+	// 		},
+	// 		[box.x, box.y],
+	// 		[box.dx, box.dy]
+	// 	);
+	// }
 
 	// marchingSquaresLinearInterpolated(
 	// 	context,
@@ -357,6 +362,8 @@ if (context) {
 	const list = new LinkAdjacencyList();
 
 	computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
+
+	console.timeEnd();
 
 	for (const g of list.graphs) {
 		let isFirst = true;
@@ -384,8 +391,6 @@ if (context) {
 
 		context.stroke();
 	}
-
-	console.timeEnd();
 } else {
 	console.log("Failed to draw");
 }

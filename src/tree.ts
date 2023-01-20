@@ -263,6 +263,112 @@ export class LinkAdjacencyList {
 	}
 }
 
+export function computeLinkedLists2(
+	list: LinkAdjacencyList,
+	fn: (x: number, y: number) => number,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number],
+	depth: number,
+	searchDepth: number,
+	plotDepth: number
+) {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+	console.assert(searchDepth > 0);
+	console.assert(plotDepth > 0);
+
+	function subDivide() {
+		const newDepth = depth + 1;
+		const newDx = dx / 2;
+		const newDy = dy / 2;
+
+		const newDelta = [newDx, newDy] satisfies [number, number];
+
+		const createSubTree = (vec: readonly [number, number]) =>
+			computeLinkedLists2(
+				list,
+				fn,
+				vec,
+				newDelta,
+				newDepth,
+				searchDepth,
+				plotDepth
+			);
+
+		createSubTree([x, y]);
+		createSubTree([x + newDx, y]);
+		createSubTree([x, y - newDy]);
+		createSubTree([x + newDx, y - newDy]);
+	}
+
+	if (depth < searchDepth) {
+		subDivide();
+		return;
+	}
+
+	if (hasContour(fn, [x, y], [dx, dy])) {
+		if (depth < searchDepth + plotDepth) {
+			subDivide();
+			return;
+		}
+	}
+
+	const tl = (ceil(sign(fn(x, y)) * 0.9) | 0) << 3;
+	const tr = (ceil(sign(fn(x + dx, y)) * 0.9) | 0) << 2;
+	const br = (ceil(sign(fn(x + dx, y - dy)) * 0.9) | 0) << 1;
+	const bl = ceil(sign(fn(x, y - dy)) * 0.9) | 0;
+
+	const value = tl | tr | br | bl;
+
+	const lines = lut[value];
+
+	for (const line of lines) {
+		const sides: [Point2D, Point2D][] = [];
+
+		for (const direction of line) {
+			switch (direction) {
+				case "upper":
+					sides.push([
+						[x, y],
+						[x + dx, y],
+					]);
+					break;
+				case "right":
+					sides.push([
+						[x + dx, y],
+						[x + dx, y - dy],
+					]);
+					break;
+				case "lower":
+					sides.push([
+						[x, y - dy],
+						[x + dx, y - dy],
+					]);
+					break;
+				case "left":
+					sides.push([
+						[x, y],
+						[x, y - dy],
+					]);
+					break;
+			}
+		}
+
+		const [from, to] = sides;
+		if (!from) {
+			console.error("Expected exactly two points, but got none");
+			continue;
+		}
+
+		if (!to) {
+			console.error("Expected exactly two points, but got one");
+			continue;
+		}
+
+		list.linkNode(from, to);
+	}
+}
+
 export function computeLinkedLists(
 	list: LinkAdjacencyList,
 	fn: (x: number, y: number) => number,
