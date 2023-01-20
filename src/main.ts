@@ -7,7 +7,7 @@
 // More readings
 // https://martindevans.me/game-development/2016/12/27/Dual-Contouring-In-2D/
 
-import { computeLinkedLists, LinkAdjacencyList } from "./tree2";
+import { computeLinkedLists, LinkAdjacencyList } from "./tree";
 
 // General idea
 //
