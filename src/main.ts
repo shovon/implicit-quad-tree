@@ -7,12 +7,7 @@
 // More readings
 // https://martindevans.me/game-development/2016/12/27/Dual-Contouring-In-2D/
 
-import {
-	computeLinkedLists,
-	createTree,
-	LinkAdjacencyList,
-	QuadTreeNode,
-} from "./tree";
+import { computeLinkedLists, LinkAdjacencyList } from "./tree2";
 
 // General idea
 //
@@ -117,49 +112,49 @@ function drawBox(
 // Converts a hierarchical tree into individual boxes.
 //
 // This was purely for debugging purposes
-function getBoxes(
-	fromDelta: {
-		readonly from: readonly [number, number];
-		readonly delta: readonly [number, number];
-	},
-	node: QuadTreeNode | null,
-	[x, y]: readonly [number, number],
-	[dx, dy]: readonly [number, number]
-): { x: number; y: number; dx: number; dy: number }[] {
-	console.assert(dx > 0);
-	console.assert(dy > 0);
+// function getBoxes(
+// 	fromDelta: {
+// 		readonly from: readonly [number, number];
+// 		readonly delta: readonly [number, number];
+// 	},
+// 	node: QuadTreeNode | null,
+// 	[x, y]: readonly [number, number],
+// 	[dx, dy]: readonly [number, number]
+// ): { x: number; y: number; dx: number; dy: number }[] {
+// 	console.assert(dx > 0);
+// 	console.assert(dy > 0);
 
-	let arr: { x: number; y: number; dx: number; dy: number }[] = [];
+// 	let arr: { x: number; y: number; dx: number; dy: number }[] = [];
 
-	if (node) {
-		const dxHalf = dx / 2;
-		const dyHalf = dy / 2;
-		const deltaHalf = [dxHalf, dyHalf] as const;
+// 	if (node) {
+// 		const dxHalf = dx / 2;
+// 		const dyHalf = dy / 2;
+// 		const deltaHalf = [dxHalf, dyHalf] as const;
 
-		arr = [...arr, ...getBoxes(fromDelta, node.topLeft, [x, y], deltaHalf)];
-		arr = [
-			...arr,
-			...getBoxes(fromDelta, node.topRight, [x + dxHalf, y], deltaHalf),
-		];
-		arr = [
-			...arr,
-			...getBoxes(fromDelta, node.bottomLeft, [x, y - dyHalf], deltaHalf),
-		];
-		arr = [
-			...arr,
-			...getBoxes(
-				fromDelta,
-				node.bottomRight,
-				[x + dxHalf, y - dyHalf],
-				deltaHalf
-			),
-		];
-	} else {
-		arr.push({ x, y, dx, dy });
-	}
+// 		arr = [...arr, ...getBoxes(fromDelta, node.topLeft, [x, y], deltaHalf)];
+// 		arr = [
+// 			...arr,
+// 			...getBoxes(fromDelta, node.topRight, [x + dxHalf, y], deltaHalf),
+// 		];
+// 		arr = [
+// 			...arr,
+// 			...getBoxes(fromDelta, node.bottomLeft, [x, y - dyHalf], deltaHalf),
+// 		];
+// 		arr = [
+// 			...arr,
+// 			...getBoxes(
+// 				fromDelta,
+// 				node.bottomRight,
+// 				[x + dxHalf, y - dyHalf],
+// 				deltaHalf
+// 			),
+// 		];
+// 	} else {
+// 		arr.push({ x, y, dx, dy });
+// 	}
 
-	return arr;
-}
+// 	return arr;
+// }
 
 // This is useful. Generalizable across domains
 function intercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
@@ -168,136 +163,136 @@ function intercept([x1, y1]: Point2D, [x2, y2]: Point2D): number {
 	return -b / m;
 }
 
-function marchingSquaresLinearInterpolated(
-	context: CanvasRenderingContext2D,
-	zero: (x: number, y: number) => number,
-	fromDelta: {
-		readonly from: readonly [number, number];
-		readonly delta: readonly [number, number];
-	},
-	node: QuadTreeNode | null,
-	[x, y]: readonly [number, number],
-	[dx, dy]: readonly [number, number]
-) {
-	console.assert(dx > 0);
-	console.assert(dy > 0);
+// function marchingSquaresLinearInterpolated(
+// 	context: CanvasRenderingContext2D,
+// 	zero: (x: number, y: number) => number,
+// 	fromDelta: {
+// 		readonly from: readonly [number, number];
+// 		readonly delta: readonly [number, number];
+// 	},
+// 	node: QuadTreeNode | null,
+// 	[x, y]: readonly [number, number],
+// 	[dx, dy]: readonly [number, number]
+// ) {
+// 	console.assert(dx > 0);
+// 	console.assert(dy > 0);
 
-	if (node) {
-		const dxHalf = dx / 2;
-		const dyHalf = dy / 2;
-		const deltaHalf = [dxHalf, dyHalf] as const;
+// 	if (node) {
+// 		const dxHalf = dx / 2;
+// 		const dyHalf = dy / 2;
+// 		const deltaHalf = [dxHalf, dyHalf] as const;
 
-		marchingSquaresLinearInterpolated(
-			context,
-			zero,
-			fromDelta,
-			node.topLeft,
-			[x, y],
-			deltaHalf
-		);
-		marchingSquaresLinearInterpolated(
-			context,
-			zero,
-			fromDelta,
-			node.topRight,
-			[x + dxHalf, y],
-			deltaHalf
-		);
-		marchingSquaresLinearInterpolated(
-			context,
-			zero,
-			fromDelta,
-			node.bottomLeft,
-			[x, y - dyHalf],
-			deltaHalf
-		);
-		marchingSquaresLinearInterpolated(
-			context,
-			zero,
-			fromDelta,
-			node.bottomRight,
-			[x + dxHalf, y - dyHalf],
-			deltaHalf
-		);
-	} else {
-		const tl = (Math.ceil(Math.sign(zero(x, y)) * 0.9) | 0) << 3;
-		const tr = (Math.ceil(Math.sign(zero(x + dx, y)) * 0.9) | 0) << 2;
-		const br = (Math.ceil(Math.sign(zero(x + dx, y - dy)) * 0.9) | 0) << 1;
-		const bl = Math.ceil(Math.sign(zero(x, y - dy)) * 0.9) | 0;
+// 		marchingSquaresLinearInterpolated(
+// 			context,
+// 			zero,
+// 			fromDelta,
+// 			node.topLeft,
+// 			[x, y],
+// 			deltaHalf
+// 		);
+// 		marchingSquaresLinearInterpolated(
+// 			context,
+// 			zero,
+// 			fromDelta,
+// 			node.topRight,
+// 			[x + dxHalf, y],
+// 			deltaHalf
+// 		);
+// 		marchingSquaresLinearInterpolated(
+// 			context,
+// 			zero,
+// 			fromDelta,
+// 			node.bottomLeft,
+// 			[x, y - dyHalf],
+// 			deltaHalf
+// 		);
+// 		marchingSquaresLinearInterpolated(
+// 			context,
+// 			zero,
+// 			fromDelta,
+// 			node.bottomRight,
+// 			[x + dxHalf, y - dyHalf],
+// 			deltaHalf
+// 		);
+// 	} else {
+// 		const tl = (Math.ceil(Math.sign(zero(x, y)) * 0.9) | 0) << 3;
+// 		const tr = (Math.ceil(Math.sign(zero(x + dx, y)) * 0.9) | 0) << 2;
+// 		const br = (Math.ceil(Math.sign(zero(x + dx, y - dy)) * 0.9) | 0) << 1;
+// 		const bl = Math.ceil(Math.sign(zero(x, y - dy)) * 0.9) | 0;
 
-		const value = tl | tr | br | bl;
+// 		const value = tl | tr | br | bl;
 
-		const lines = lut[value]; // Usually 1 or 2 lines
-		for (const line of lines) {
-			const { width, height } = context.canvas.getBoundingClientRect();
+// 		const lines = lut[value]; // Usually 1 or 2 lines
+// 		for (const line of lines) {
+// 			const { width, height } = context.canvas.getBoundingClientRect();
 
-			const points: Point2D[] = [];
+// 			const points: Point2D[] = [];
 
-			for (const direction of line) {
-				switch (direction) {
-					case "upper":
-						{
-							// Get the top point.
-							const point = [
-								intercept([x, zero(x, y)], [x + dx, zero(x + dx, y)]),
-								y,
-							] satisfies Point2D;
-							points.push(point);
-						}
-						break;
-					case "right":
-						{
-							// Get the right point.
-							const point = [
-								x + dx,
-								intercept([y, zero(x + dx, y)], [y - dy, zero(x + dx, y - dy)]),
-							] satisfies Point2D;
-							points.push(point);
-						}
-						break;
-					case "lower":
-						// get the bottom point
-						points.push([
-							intercept([x, zero(x, y - dy)], [x + dx, zero(x + dx, y - dy)]),
-							y - dy,
-						]);
-						break;
-					case "left":
-						points.push([
-							x,
-							intercept([y, zero(x, y)], [y - dy, zero(x, y - dy)]),
-						]);
-						break;
-				}
-			}
+// 			for (const direction of line) {
+// 				switch (direction) {
+// 					case "upper":
+// 						{
+// 							// Get the top point.
+// 							const point = [
+// 								intercept([x, zero(x, y)], [x + dx, zero(x + dx, y)]),
+// 								y,
+// 							] satisfies Point2D;
+// 							points.push(point);
+// 						}
+// 						break;
+// 					case "right":
+// 						{
+// 							// Get the right point.
+// 							const point = [
+// 								x + dx,
+// 								intercept([y, zero(x + dx, y)], [y - dy, zero(x + dx, y - dy)]),
+// 							] satisfies Point2D;
+// 							points.push(point);
+// 						}
+// 						break;
+// 					case "lower":
+// 						// get the bottom point
+// 						points.push([
+// 							intercept([x, zero(x, y - dy)], [x + dx, zero(x + dx, y - dy)]),
+// 							y - dy,
+// 						]);
+// 						break;
+// 					case "left":
+// 						points.push([
+// 							x,
+// 							intercept([y, zero(x, y)], [y - dy, zero(x, y - dy)]),
+// 						]);
+// 						break;
+// 				}
+// 			}
 
-			const [first, ...remainder] = points;
+// 			const [first, ...remainder] = points;
 
-			const [fromX, fromY] = pointToAbsolute(
-				fromDelta,
-				[first[0], first[1]],
-				[width, height]
-			);
+// 			const [fromX, fromY] = pointToAbsolute(
+// 				fromDelta,
+// 				[first[0], first[1]],
+// 				[width, height]
+// 			);
 
-			context.strokeStyle = "red";
-			context.beginPath();
+// 			context.strokeStyle = "red";
+// 			context.beginPath();
 
-			context.moveTo(fromX, fromY);
+// 			context.moveTo(fromX, fromY);
 
-			for (const to of remainder) {
-				const [toX, toY] = pointToAbsolute(
-					fromDelta,
-					[to[0], to[1]],
-					[width, height]
-				);
+// 			for (const to of remainder) {
+// 				const [toX, toY] = pointToAbsolute(
+// 					fromDelta,
+// 					[to[0], to[1]],
+// 					[width, height]
+// 				);
 
-				context.lineTo(toX, toY);
-			}
+// 				context.lineTo(toX, toY);
+// 			}
 
-			context.stroke();
-		}
-	}
-}
+// 			context.stroke();
+// 		}
+// 	}
+// }
 
 const canvas = document.createElement("canvas") satisfies HTMLCanvasElement;
 canvas.width = 800;
@@ -318,12 +313,12 @@ function mid(
 }
 
 if (context) {
-	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 1 * x + 1;
+	const zero = (x: number, y: number) => -(y ** 2) + x ** 3 - 1 * x;
 	// const zero = (x: number, y: number) => y ** 2 + x ** 2 - 3;
 
 	console.time();
 
-	const node = createTree(zero, 0, [-3, 3], [6, 6], 5, 3);
+	// const node = createTree(zero, 0, [-3, 3], [6, 6], 3, 3);
 
 	// const boxes = getBoxes(
 	// 	{
@@ -361,7 +356,8 @@ if (context) {
 
 	const list = new LinkAdjacencyList();
 
-	computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
+	// computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
+	computeLinkedLists(list, zero, [-3, 3], [6, 6], 0, 5, 3);
 
 	console.timeEnd();
 
