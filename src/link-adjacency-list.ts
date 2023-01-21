@@ -14,7 +14,7 @@ function first<V>(iterable: Iterable<V>): Optional<V> {
 const pointEquals = ([x1, y1]: Point2D, [x2, y2]: Point2D) =>
 	x1 === x2 && y1 === y2;
 
-export class LinkAdjacencyListSide {
+export class LinkAdjacencyList {
 	private _map: PointMap<PointSet> = new PointMap();
 
 	// Link two nodes
@@ -54,11 +54,7 @@ export class LinkAdjacencyListSide {
 			const optional = first(copied);
 			if (optional) {
 				const [[side]] = optional;
-				const root = LinkAdjacencyListSide.findRoot(
-					side,
-					copied,
-					new PointSet()
-				);
+				const root = LinkAdjacencyList.findRoot(side, copied, new PointSet());
 				if (root) {
 					roots.push(root);
 				}
@@ -115,7 +111,7 @@ export class LinkAdjacencyListSide {
 
 		for (const neighbor of [...neighbors]) {
 			if (map.has(neighbor) && !visited.has(neighbor)) {
-				const result = LinkAdjacencyListSide.findRoot(neighbor, map, visited);
+				const result = LinkAdjacencyList.findRoot(neighbor, map, visited);
 				if (result) {
 					nodes.push(result);
 				}

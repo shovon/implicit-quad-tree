@@ -7,8 +7,9 @@
 // More readings
 // https://martindevans.me/game-development/2016/12/27/Dual-Contouring-In-2D/
 
-import { computeLinkedLists } from "./tree";
+import { computeLinkedLists, computeLinkedListsPoints } from "./tree";
 import { LinkAdjacencyListSide } from "./link-adjacency-list-2d";
+import { LinkAdjacencyList } from "./link-adjacency-list";
 
 // General idea
 //
@@ -84,34 +85,63 @@ if (context) {
 
 	console.time();
 
-	const list = new LinkAdjacencyListSide();
+	// const list = new LinkAdjacencyListSide();
+	// computeLinkedLists(list, zero, [-3, 3], [6, 6], 0, 5, 3);
 
-	// computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
-	computeLinkedLists(list, zero, [-3, 3], [6, 6], 0, 5, 3);
+	const listPoints = new LinkAdjacencyList();
+
+	computeLinkedListsPoints(listPoints, zero, [-3, 3], [6, 6], 0, 5, 3);
 
 	console.timeEnd();
 
-	for (const g of list.graphs) {
+	// for (const g of list.graphs) {
+	// 	let isFirst = true;
+
+	// 	const graph = [...g];
+
+	// 	context.strokeStyle = "red";
+	// 	for (const [point1, point2] of graph) {
+	// 		const point = pixelSpace(
+	// 			{
+	// 				start: [-3, 3],
+	// 				delta: [6, 6],
+	// 			},
+	// 			mid(zero, [point1, point2]),
+	// 			getContextDimensions(context)
+	// 		);
+
+	// 		if (isFirst) {
+	// 			isFirst = false;
+	// 			context.moveTo(point[0], point[1]);
+	// 		} else {
+	// 			context.lineTo(point[0], point[1]);
+	// 		}
+	// 	}
+
+	// 	context.stroke();
+	// }
+
+	for (const g of listPoints.graphs) {
 		let isFirst = true;
 
 		const graph = [...g];
 
 		context.strokeStyle = "red";
-		for (const [point1, point2] of graph) {
-			const point = pixelSpace(
+		for (const point of graph) {
+			const p = pixelSpace(
 				{
 					start: [-3, 3],
 					delta: [6, 6],
 				},
-				mid(zero, [point1, point2]),
+				point,
 				getContextDimensions(context)
 			);
 
 			if (isFirst) {
 				isFirst = false;
-				context.moveTo(point[0], point[1]);
+				context.moveTo(p[0], p[1]);
 			} else {
-				context.lineTo(point[0], point[1]);
+				context.lineTo(p[0], p[1]);
 			}
 		}
 
