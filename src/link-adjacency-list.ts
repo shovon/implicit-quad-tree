@@ -22,28 +22,20 @@ const sideEquals = (
 export class LinkAdjacencyList {
 	private _map: SideMap<SideSet> = new SideMap();
 
-	// Link two nodes
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
-		// Get the adjacency associated with `from`
 		let list = this._map.get(from);
 		if (!list) {
 			list = new SideSet();
 			this._map.set(from, list);
 		}
-		// Append the destination
 		list.add(to);
 
-		// Get the adjacency associated with `to`
 		list = this._map.get(to);
 		if (!list) {
 			list = new SideSet();
 			this._map.set(to, list);
 		}
-		// Append the source
 		list.add(from);
-
-		// Effectively, this should allow us to implement an adjacency list
-		// representing a doubly linked list
 	}
 
 	get graphs() {
@@ -77,7 +69,9 @@ export class LinkAdjacencyList {
 		visited: SideSet
 	): IterableIterator<[Point2D, Point2D]> {
 		yield root;
+
 		visited.add(root);
+
 		const neighbors = this._map.get(root);
 		if (!neighbors) {
 			return;
@@ -112,20 +106,19 @@ export class LinkAdjacencyList {
 			return side;
 		}
 
-		const nodes: [Point2D, Point2D][] = [];
+		let node: [Point2D, Point2D] | null = null;
 
-		// Iterate through all neighbors,
 		for (const neighbor of [...neighbors]) {
 			if (map.has(neighbor) && !visited.has(neighbor)) {
 				const result = LinkAdjacencyList.findRoot(neighbor, map, visited);
 				if (result) {
-					nodes.push(result);
+					node = result;
 				}
 			}
 		}
 
-		if (nodes.length) {
-			return nodes[0];
+		if (node) {
+			return node;
 		}
 
 		return side;
