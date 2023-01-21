@@ -1,4 +1,4 @@
-import { SideMap, SideSet } from "./side-map";
+import { SideMap, SideSet } from "./string-side-map";
 
 type Point2D = [number, number];
 
@@ -19,7 +19,7 @@ const sideEquals = (
 	[s2p1, s2p2]: [Point2D, Point2D]
 ): boolean => pointEquals(s1p1, s2p1) && pointEquals(s1p2, s2p2);
 
-export class LinkAdjacencyList {
+export class LinkAdjacencyListString {
 	private _map: SideMap<SideSet> = new SideMap();
 
 	linkNode(from: [Point2D, Point2D], to: [Point2D, Point2D]) {
@@ -51,7 +51,11 @@ export class LinkAdjacencyList {
 			const optional = first(copied);
 			if (optional) {
 				const [[side]] = optional;
-				const root = LinkAdjacencyList.findRoot(side, copied, new SideSet());
+				const root = LinkAdjacencyListString.findRoot(
+					side,
+					copied,
+					new SideSet()
+				);
 				if (root) {
 					roots.push(root);
 				}
@@ -110,7 +114,7 @@ export class LinkAdjacencyList {
 
 		for (const neighbor of [...neighbors]) {
 			if (map.has(neighbor) && !visited.has(neighbor)) {
-				const result = LinkAdjacencyList.findRoot(neighbor, map, visited);
+				const result = LinkAdjacencyListString.findRoot(neighbor, map, visited);
 				if (result) {
 					node = result;
 				}

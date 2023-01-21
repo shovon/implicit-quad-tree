@@ -1,4 +1,4 @@
-import { LinkAdjacencyList } from "./link-adjacency-list";
+import { LinkAdjacencyListString as LinkAdjacencyList } from "./link-adjacency-list-string";
 
 const { round, abs, sign, ceil } = Math;
 
