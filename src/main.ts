@@ -89,8 +89,8 @@ if (context) {
 
 	const list = new LinkAdjacencyList();
 
-	// computeLinkedLists(list, zero, node, [-3, 3], [6, 6]);
-	computeLinkedLists(list, zero, [-3, 3], [6, 6], 0, 5, 3);
+	computeLinkedLists(list, zero, [-8, 4], [8, 6], 0, 5, 4);
+	// computeLinkedLists(list, zero, [-3, -3], [6, 6], 0, 5, 4);
 
 	console.timeEnd();
 
