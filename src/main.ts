@@ -26,6 +26,147 @@ import { LinkAdjacencyList } from "./link-adjacency-list";
 
 type Point2D = [number, number];
 
+const { round, abs, sign, ceil } = Math;
+
+export type QuadTreeNode = {
+	readonly topLeft: QuadTreeNode | null;
+	readonly topRight: QuadTreeNode | null;
+	readonly bottomLeft: QuadTreeNode | null;
+	readonly bottomRight: QuadTreeNode | null;
+};
+
+function hasContour(
+	fn: (x: number, y: number) => number,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number]
+): boolean {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+
+	return (
+		round(
+			abs(
+				sign(fn(x, y)) +
+					sign(fn(x + dx, y)) +
+					sign(fn(x, y - dy)) +
+					sign(fn(x + dx, y - dy))
+			)
+		) !== 4
+	);
+}
+
+function drawBox(
+	context: CanvasRenderingContext2D,
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	point: readonly [number, number],
+	dimensions: readonly [number, number]
+) {
+	console.assert(fromDelta.delta[0] > 0);
+	console.assert(fromDelta.delta[1] > 0);
+
+	const [width, height] = getContextDimensions(context);
+
+	const [x, y] = pointToAbsolute(fromDelta, point, [width, height]);
+
+	const boxWidth = dimensions[1] * (width / fromDelta.delta[0]);
+	const boxHeight = dimensions[1] * (height / fromDelta.delta[1]);
+
+	context.strokeStyle = "rgba(0, 0, 0, 0.125)";
+	context.lineWidth = 1;
+	context.strokeRect(x, y, boxWidth, boxHeight);
+}
+
+function getBoxes(
+	fromDelta: {
+		readonly from: readonly [number, number];
+		readonly delta: readonly [number, number];
+	},
+	node: QuadTreeNode | null,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number]
+): { x: number; y: number; dx: number; dy: number }[] {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+
+	let arr: { x: number; y: number; dx: number; dy: number }[] = [];
+
+	if (node) {
+		const dxHalf = dx / 2;
+		const dyHalf = dy / 2;
+		const deltaHalf = [dxHalf, dyHalf] as const;
+
+		arr = [...arr, ...getBoxes(fromDelta, node.topLeft, [x, y], deltaHalf)];
+		arr = [
+			...arr,
+			...getBoxes(fromDelta, node.topRight, [x + dxHalf, y], deltaHalf),
+		];
+		arr = [
+			...arr,
+			...getBoxes(fromDelta, node.bottomLeft, [x, y - dyHalf], deltaHalf),
+		];
+		arr = [
+			...arr,
+			...getBoxes(
+				fromDelta,
+				node.bottomRight,
+				[x + dxHalf, y - dyHalf],
+				deltaHalf
+			),
+		];
+	} else {
+		arr.push({ x, y, dx, dy });
+	}
+
+	return arr;
+}
+
+export function createTree(
+	fn: (x: number, y: number) => number,
+	depth: number,
+	[x, y]: readonly [number, number],
+	[dx, dy]: readonly [number, number],
+	searchDepth: number,
+	plotDepth: number
+): QuadTreeNode | null {
+	console.assert(dx > 0);
+	console.assert(dy > 0);
+	console.assert(searchDepth > 0);
+	console.assert(plotDepth > 0);
+
+	function subDivide(): QuadTreeNode {
+		const newDepth = depth + 1;
+		const newDx = dx / 2;
+		const newDy = dy / 2;
+
+		const newDelta = [newDx, newDy] satisfies [number, number];
+
+		const createSubTree = (vec: readonly [number, number]) =>
+			createTree(fn, newDepth, vec, newDelta, searchDepth, plotDepth);
+
+		return {
+			topLeft: createSubTree([x, y]),
+			topRight: createSubTree([x + newDx, y]),
+			bottomLeft: createSubTree([x, y - newDy]),
+			bottomRight: createSubTree([x + newDx, y - newDy]),
+		};
+	}
+
+	if (depth < searchDepth) {
+		return subDivide();
+	}
+
+	if (hasContour(fn, [x, y], [dx, dy])) {
+		if (depth < searchDepth + plotDepth) {
+			return subDivide();
+		}
+	}
+
+	return null;
+}
+
 // This is a helper function to convert coordinates to screen space. Perhaps
 // the use of a projection matrix will be much better
 function pointToAbsolute(
@@ -89,10 +230,34 @@ if (context) {
 
 	const list = new LinkAdjacencyList();
 
-	computeLinkedLists(list, zero, [-8, 4], [8, 6], 0, 5, 4);
+	// const node = createTree(zero, 0, [-4, 4], [8, 8], 5, 4);
+	computeLinkedLists(list, zero, [-16, 4], [24, 12], 0, 5, 4);
+
 	// computeLinkedLists(list, zero, [-3, -3], [6, 6], 0, 5, 4);
 
 	console.timeEnd();
+
+	// const boxes = getBoxes(
+	// 	{
+	// 		from: [-4, 4],
+	// 		delta: [8, 8],
+	// 	},
+	// 	node,
+	// 	[-4, 4],
+	// 	[8, 8]
+	// );
+
+	// for (const box of boxes) {
+	// 	drawBox(
+	// 		context,
+	// 		{
+	// 			from: [-4, 4],
+	// 			delta: [8, 8],
+	// 		},
+	// 		[box.x, box.y],
+	// 		[box.dx, box.dy]
+	// 	);
+	// }
 
 	for (const g of list.graphs) {
 		let isFirst = true;
@@ -103,8 +268,8 @@ if (context) {
 		for (const [point1, point2] of graph) {
 			const point = pointToAbsolute(
 				{
-					from: [-3, 3],
-					delta: [6, 6],
+					from: [-8, 4],
+					delta: [24, 12],
 				},
 				mid(zero, [point1, point2]),
 				getContextDimensions(context)
